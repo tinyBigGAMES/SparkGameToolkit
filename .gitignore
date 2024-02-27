@@ -67,3 +67,8 @@ __recovery/
 
 # Boss dependency manager vendor folder https://github.com/HashLoad/boss
 modules/
+
+# SparkGameToolkit
+!bin/SGT.dll
+bin/Data.zip
+bin/imgui.ini
