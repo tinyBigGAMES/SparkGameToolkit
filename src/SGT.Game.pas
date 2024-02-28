@@ -37,26 +37,12 @@ Email  : support@tinybiggames.com
 See LICENSE for license information
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *)
 
-program Testbed;
+unit SGT.Game;
 
-{$APPTYPE CONSOLE}
+{$I SGT.Defines.inc}
 
-{$R *.res}
+interface
 
-uses
-  System.SysUtils,
-  UTestbed in 'UTestbed.pas',
-  SGT.Deps in '..\..\src\SGT.Deps.pas',
-  SGT.OGL in '..\..\src\SGT.OGL.pas',
-  SGT.Lib in '..\..\src\SGT.Lib.pas',
-  SGT.Game in '..\..\src\SGT.Game.pas';
+implementation
 
-begin
-  try
-    ReportMemoryLeaksOnShutdown := True;
-    RunTests();
-  except
-    on E: Exception do
-      Writeln(E.ClassName, ': ', E.Message);
-  end;
 end.

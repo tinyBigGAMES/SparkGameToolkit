@@ -45,7 +45,8 @@ uses
   System.Generics.Collections,
   System.SysUtils,
   SGT.Deps,
-  SGT.OGL;
+  SGT.OGL,
+  SGT.Lib;
 
 procedure RunTests();
 
@@ -55,15 +56,6 @@ var
   mem: TDictionary<Pointer, NativeUInt>;
   stat_total_allocs: NativeUInt;
   stat_total_mem: NativeUInt;
-
-procedure Pause();
-begin
-  WriteLn;
-  Write('Press ENTER to continue...');
-  ReadLn;
-  WriteLn;
-end;
-
 
 //void error_callback(int e, const char *d)
 procedure glfw_error_callback(e: integer; const d: pansichar); cdecl;
@@ -216,6 +208,7 @@ begin
   begin
     glfwDestroyWindow(window);
     glfwTerminate();
+    Exit;
   end;
 
   glfwGetWindowContentScale(window, @xscale, @yscale); // Get DPI scale factor
@@ -293,7 +286,7 @@ end;
 procedure RunTests();
 begin
   Test01();
-  Pause();
+  TConsole.Pause();
 end;
 
 end.
