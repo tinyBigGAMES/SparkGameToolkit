@@ -65,13 +65,14 @@ uses
   SGT.OGL;
 
 const
-  NAME          = 'Spark Game Toolkit™';
-  CODENAME      = 'Ignite';
-  MAJOR_VERSION = '0';
-  MINOR_VERSION = '1';
-  PATCH_VERSION = '0';
-  VERSION       = MAJOR_VERSION+'.'+MINOR_VERSION+'.'+PATCH_VERSION;
-  PROJECT       = NAME+' ('+CODENAME+') v'+MAJOR_VERSION+'.'+MINOR_VERSION+'.'+PATCH_VERSION;
+  SGT_NAME          = 'Spark Game Toolkit™';
+  SGT_DEVELOPER     = 'tinyBigGAMES™ LLC';
+  SGT_CODENAME      = 'Ignite';
+  SGT_MAJOR_VERSION = '0';
+  SGT_MINOR_VERSION = '1';
+  SGT_PATCH_VERSION = '0';
+  SGT_VERSION       = SGT_MAJOR_VERSION+'.'+SGT_MINOR_VERSION+'.'+SGT_PATCH_VERSION;
+  SGT_PROJECT       = SGT_NAME+' ('+SGT_CODENAME+') v'+SGT_MAJOR_VERSION+'.'+SGT_MINOR_VERSION+'.'+SGT_PATCH_VERSION+', ' + SGT_DEVELOPER;
 
 type
   { TSeekMode }
@@ -453,6 +454,106 @@ type
     procedure Clear();
   end;
 
+type
+  { TIOMode }
+  TIOMode = (iomRead, iomWrite);
+
+  { TIO }
+  TIO = class(TBaseObject)
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+    procedure Close(); virtual;
+    function  Size(): Int64; virtual;
+    function  Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64; virtual;
+    function  Read(const AData: Pointer; const ASize: Int64): Int64; virtual;
+    function  Write(const AData: Pointer; const ASize: Int64): Int64; virtual;
+    function  Tell(): Int64; virtual;
+    function  Eos(): Boolean; virtual;
+  end;
+
+  { TMemoryIO }
+  TMemoryIO = class(TIO)
+  protected
+    FHandle: TMemoryStream;
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+    function  Duplicate(): TIO; virtual;
+    procedure Close(); override;
+    function  Size(): Int64; override;
+    function  Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64; override;
+    function  Read(const AData: Pointer; const ASize: Int64): Int64; override;
+    function  Write(const AData: Pointer; const ASize: Int64): Int64; override;
+    function  Tell(): Int64; override;
+    function  Eos(): Boolean; override;
+    function  Memory(): Pointer; virtual;
+    class function Open(const ASize: Int64): TMemoryIO; overload;
+    class function Open(const AFilename: string): TMemoryIO; overload;
+    class function Open(const AData: Pointer; ASize: Int64): TMemoryIO; overload;
+  end;
+
+  { TFileIO }
+  TFileIO = class(TIO)
+  protected
+    FHandle: TFileStream;
+    FMode: TIOMode;
+    function DoOpen(const AFilename: string; const AMode: TIOMode): Boolean;
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+    procedure Close(); override;
+    function  Size(): Int64; override;
+    function  Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64; override;
+    function  Read(const AData: Pointer; const ASize: Int64): Int64; override;
+    function  Write(const AData: Pointer; const ASize: Int64): Int64; override;
+    function  Tell(): Int64; override;
+    function  Eos(): Boolean; override;
+    class function Open(const AFilename: string; const AMode: TIOMode): TFileIO;
+  end;
+
+  { TZipFileIO }
+  TZipFileIO = class(TIO)
+  protected
+    FHandle: unzFile;
+    FPassword: AnsiString;
+    FFilename: AnsiString;
+    function DoOpen(const AZipFilename, AFilename: string; const APassword: string): Boolean;
+  public const
+    DEFAULT_PASSWORD = 'N^TpjE5/*czG,<ns>$}w;?x_uBm9[JSr{(+FRv7ZW@C-gd3D!PRUgWE4P2/wpm9-dt^Y?e)Az+xsMb@jH"!X`B3ar(yq=nZ_~85<';
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+    procedure Close(); override;
+    function  Size(): Int64; override;
+    function  Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64; override;
+    function  Read(const AData: Pointer; const ASize: Int64): Int64; override;
+    function  Write(const AData: Pointer; const ASize: Int64): Int64; override;
+    function  Tell(): Int64; override;
+    function  Eos(): Boolean; override;
+    class function Open(const AZipFilename, AFilename: string; const APassword: string=DEFAULT_PASSWORD): TZipFileIO;
+  end;
+
+  { TZipFile }
+  TZipFile = class(TBaseObject)
+  protected
+    FZipFilename: string;
+    FPassword: string;
+    FIsOpen: Boolean;
+  public type
+    BuildProgress = procedure(const ASender: Pointer; const AFilename: string; const AProgress: Integer; const ANewFile: Boolean);
+  public
+    constructor Create; override;
+    destructor Destroy; override;
+    function  Open(const AZipFilename: string; const APassword: string=TZipFileIO.DEFAULT_PASSWORD): Boolean;
+    function  IsOpen(): Boolean;
+    procedure Close();
+    function  OpenFile(const AFilename: string): TZipFileIO;
+    function  OpenFileToStream(const AFilename: string): TStream;
+    class function Init(const AZipFilename: string; const APassword: string=TZipFileIO.DEFAULT_PASSWORD): TZipFile;
+    class function Build(const AZipFilename, ADirectoryName: string; const ASender: Pointer; const AHandler: BuildProgress; const APassword: string=TZipFileIO.DEFAULT_PASSWORD): Boolean;
+  end;
+
   { TColor }
   PColor = ^TColor;
   TColor = record
@@ -622,6 +723,7 @@ const
   DIMWHITE            : TColor = (Red:$10/$FF; Green:$10/$FF; Blue:$10/$FF; Alpha:$10/$FF);
   DARKSLATEBROWN      : TColor = (Red:30/255; Green:31/255; Blue:30/255; Alpha:1/255);
 {$ENDREGION}
+
 
 implementation
 
@@ -2985,6 +3087,601 @@ begin
     TUtils.LeaveCriticalSection();
   end;
 end;
+
+constructor TIO.Create();
+begin
+  inherited;
+end;
+
+destructor TIO.Destroy();
+begin
+  inherited;
+end;
+
+procedure TIO.Close();
+begin
+end;
+
+function  TIO.Size(): Int64;
+begin
+  Result := -1;
+end;
+
+function  TIO.Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64;
+begin
+  Result := -1;
+end;
+
+function  TIO.Read(const AData: Pointer; const ASize: Int64): Int64;
+begin
+  Result := -1;
+end;
+
+function  TIO.Write(const AData: Pointer; const ASize: Int64): Int64;
+begin
+  Result := -1;
+end;
+
+function  TIO.Tell(): Int64;
+begin
+  Result := -1;
+end;
+
+function  TIO.Eos(): Boolean;
+begin
+  Result := False;
+end;
+
+{ --- TlgMemoryStream ------------------------------------------------------- }
+constructor TMemoryIO.Create();
+begin
+  inherited;
+  FHandle := TMemoryStream.Create();
+end;
+
+destructor TMemoryIO.Destroy();
+begin
+  Close();
+  inherited;
+end;
+
+function  TMemoryIO.Duplicate(): TIO;
+var
+  LStream: TMemoryIO;
+begin
+  LStream := TMemoryIO.Create;
+  LStream.FHandle.CopyFrom(Self.FHandle);
+  LStream.Seek(0, smStart);
+  Result := LStream;
+end;
+
+procedure TMemoryIO.Close();
+begin
+  if not Assigned(FHandle) then Exit;
+  FHandle.Free();
+  FHandle := nil;
+end;
+
+function  TMemoryIO.Size(): Int64;
+begin
+  Result := FHandle.Size;
+end;
+
+function  TMemoryIO.Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64;
+begin
+  Result := FHandle.Seek(AOffset, Ord(ASeek));
+end;
+
+function  TMemoryIO.Read(const AData: Pointer; const ASize: Int64): Int64;
+begin
+  Result := FHandle.Read(AData^, ASize);
+end;
+
+function  TMemoryIO.Write(const AData: Pointer; const ASize: Int64): Int64;
+begin
+  Result := FHandle.Write(AData^, ASize);
+end;
+
+function  TMemoryIO.Tell(): Int64;
+begin
+  Result := FHandle.Position;
+end;
+
+function  TMemoryIO.Eos(): Boolean;
+begin
+  Result := Boolean(Tell() >= Size());
+end;
+
+function  TMemoryIO.Memory(): Pointer;
+begin
+  Result := FHandle.Memory;
+end;
+
+class function TMemoryIO.Open(const ASize: Int64): TMemoryIO;
+begin
+  Result := TMemoryIO.Create();
+  Result.FHandle.SetSize(ASize);
+end;
+
+class function TMemoryIO.Open(const AFilename: string): TMemoryIO;
+begin
+  Result := TMemoryIO.Create();
+  Result.FHandle.LoadFromFile(AFilename);
+end;
+
+class function TMemoryIO.Open(const AData: Pointer; ASize: Int64): TMemoryIO;
+begin
+  Result := nil;
+  if not Assigned(AData) then Exit;
+  if ASize <= 0 then Exit;
+
+  Result := TMemoryIO.Create();
+  Result.FHandle.Write(AData^, ASize);
+  Result.FHandle.Position := 0;
+end;
+
+{ --- TlgFileStream --------------------------------------------------------- }
+constructor TFileIO.Create();
+begin
+  inherited;
+end;
+
+destructor TFileIO.Destroy();
+begin
+  Close();
+  inherited;
+end;
+
+procedure TFileIO.Close();
+begin
+  if not Assigned(FHandle) then Exit;
+  FHandle.Free();
+  FHandle := nil;
+end;
+
+function  TFileIO.Size(): Int64;
+begin
+  Result := FHandle.Size;
+end;
+
+function  TFileIO.Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64;
+begin
+  Result := FHandle.Seek(AOffset, Ord(ASeek));
+end;
+
+function  TFileIO.Read(const AData: Pointer; const ASize: Int64): Int64;
+begin
+  Result := FHandle.Read(AData^, ASize);
+end;
+
+function  TFileIO.Write(const AData: Pointer; const ASize: Int64): Int64;
+begin
+  Result := FHandle.Write(AData^, ASize);
+end;
+
+function  TFileIO.Tell(): Int64;
+begin
+  Result := FHandle.Position;
+end;
+
+function  TFileIO.Eos(): Boolean;
+begin
+  Result := Boolean(Tell() >= Size());
+end;
+
+function TFileIO.DoOpen(const AFilename: string; const AMode: TIOMode): Boolean;
+begin
+  Result := False;
+  if AFilename.IsEmpty then Exit;
+
+  try
+    case AMode of
+      iomRead:
+      begin
+        FHandle := TFile.OpenRead(AFilename);
+        FMode := AMode;
+      end;
+
+      iomWrite:
+      begin
+        FHandle := TFile.OpenWrite(AFilename);
+        FMode := AMode;
+      end;
+    end;
+  except
+    FHandle := nil;
+  end;
+
+  Result := True;
+end;
+
+class function TFileIO.Open(const AFilename: string; const AMode: TIOMode): TFileIO;
+begin
+  Result := TFileIO.Create();
+  if not Result.DoOpen(AFilename, AMode) then
+  begin
+    Result.Free();
+    Result := nil;
+  end;
+end;
+
+{ --- TlgZipStream ---------------------------------------------------------- }
+constructor TZipFileIO.Create();
+begin
+  inherited;
+end;
+
+destructor TZipFileIO.Destroy();
+begin
+  Close();
+  inherited;
+end;
+
+procedure TZipFileIO.Close();
+begin
+  if Assigned(FHandle) then
+  begin
+    Assert(unzCloseCurrentFile(FHandle) = UNZ_OK);
+    Assert(unzClose(FHandle) = UNZ_OK);
+  end;
+  FHandle := nil;
+  FPassword := '';
+  FFilename := '';
+end;
+
+function  TZipFileIO.Size(): Int64;
+var
+  LInfo: unz_file_info64;
+begin
+  Result := -1;
+  if not Assigned(FHandle) then Exit;
+  unzGetCurrentFileInfo64(FHandle, @LInfo, nil, 0, nil, 0, nil, 0);
+  Result := LInfo.uncompressed_size;
+end;
+
+function  TZipFileIO.Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64;
+var
+  LFileInfo: unz_file_info64;
+  LCurrentOffset, LBytesToRead: UInt64;
+  LOffset: Int64;
+
+  procedure SeekToLoc;
+  begin
+    LBytesToRead := UInt64(LOffset) - unztell64(FHandle);
+    while LBytesToRead > 0 do
+    begin
+      if LBytesToRead > TUtils.GetTempStaticBufferSize() then
+        unzReadCurrentFile(FHandle, TUtils.GetTempStaticBuffer(), TUtils.GetTempStaticBufferSize())
+      else
+        unzReadCurrentFile(FHandle, TUtils.GetTempStaticBuffer(), LBytesToRead);
+
+      LBytesToRead := UInt64(LOffset) - unztell64(FHandle);
+    end;
+  end;
+
+begin
+  Result := -1;
+
+  if (FHandle = nil) or (unzGetCurrentFileInfo64(FHandle, @LFileInfo, nil, 0, nil, 0, nil, 0) <> UNZ_OK) then Exit;
+
+  LOffset := AOffset;
+
+  LCurrentOffset := unztell64(FHandle);
+  if LCurrentOffset = -1 then Exit;
+
+  case ASeek of
+    // offset is already relative to the start of the file
+    smStart: ;
+
+    // offset is relative to current position
+    smCurrent: Inc(LOffset, LCurrentOffset);
+
+    // offset is relative to end of the file
+    smEnd: Inc(LOffset, LFileInfo.uncompressed_size);
+  else
+    Exit;
+  end;
+
+  if LOffset < 0 then
+    Exit
+  else if AOffset > LCurrentOffset then
+  begin
+    SeekToLoc;
+  end
+  else // offset < current_offset
+  begin
+    unzCloseCurrentFile(FHandle);
+    unzLocateFile(FHandle, PAnsiChar(FFilename), 0);
+    unzOpenCurrentFilePassword(FHandle, PAnsiChar(FPassword));
+    SeekToLoc;
+  end;
+
+  Result := unztell64(FHandle);
+end;
+
+function  TZipFileIO.Read(const AData: Pointer; const ASize: Int64): Int64;
+begin
+  Result := -1;
+  if not Assigned(FHandle) then Exit;
+  Result := unzReadCurrentFile(FHandle, AData, ASize);
+end;
+
+function  TZipFileIO.Write(const AData: Pointer; const ASize: Int64): Int64;
+begin
+  Result := -1;
+end;
+
+function  TZipFileIO.Tell(): Int64;
+begin
+  Result := -1;
+  if not Assigned(FHandle) then Exit;
+  Result := unztell64(FHandle);
+end;
+
+function  TZipFileIO.Eos(): Boolean;
+begin
+  Result := False;
+  if not Assigned(FHandle) then Exit;
+  Result := Boolean(Tell() >= Size());
+end;
+
+function TZipFileIO.DoOpen(const AZipFilename, AFilename: string; const APassword: string): Boolean;
+var
+  LPassword: PAnsiChar;
+  LZipFilename: PAnsiChar;
+  LFilename: PAnsiChar;
+  LFile: unzFile;
+begin
+  Result := False;
+
+  LPassword := PAnsiChar(AnsiString(APassword));
+  LZipFilename := PAnsiChar(AnsiString(StringReplace(string(AZipFilename), '/', '\', [rfReplaceAll])));
+  LFilename := PAnsiChar(AnsiString(StringReplace(string(AFilename), '/', '\', [rfReplaceAll])));
+
+  LFile := unzOpen64(LZipFilename);
+  if not Assigned(LFile) then Exit;
+
+  if unzLocateFile(LFile, LFilename, 0) <> UNZ_OK then
+  begin
+    unzClose(LFile);
+    Exit;
+  end;
+
+  if unzOpenCurrentFilePassword(LFile, LPassword) <> UNZ_OK then
+  begin
+    unzClose(LFile);
+    Exit;
+  end;
+
+  Close();
+
+  FHandle := LFile;
+  FPassword := LPassword;
+  FFilename := LFilename;
+
+  Result := True;
+end;
+
+class function TZipFileIO.Open(const AZipFilename, AFilename: string; const APassword: string): TZipFileIO;
+begin
+  Result := TZipFileIO.Create();
+  if not Result.DoOpen(AZipFilename, AFilename, APassword) then
+  begin
+    Result.Free();
+    Result := nil;
+  end;
+end;
+
+{ TZipFile }
+constructor TZipFile.Create();
+begin
+  inherited;
+end;
+
+destructor TZipFile.Destroy();
+begin
+  Close();
+  inherited;
+end;
+
+function  TZipFile.Open(const AZipFilename: string; const APassword: string=TZipFileIO.DEFAULT_PASSWORD): Boolean;
+var
+  LZipFilename: PAnsiChar;
+  LFile: unzFile;
+begin
+  Result := False;
+
+  if FIsOpen then Exit;
+
+  LZipFilename := PAnsiChar(AnsiString(StringReplace(string(AZipFilename), '/', '\', [rfReplaceAll])));
+
+  LFile := unzOpen64(LZipFilename);
+  if not Assigned(LFile) then Exit;
+
+  unzClose(LFile);
+
+  FZipFilename := AZipFilename;
+  FPassword := APassword;
+  FIsOpen := True;
+
+  Result := True;
+end;
+
+function  TZipFile.IsOpen(): Boolean;
+begin
+  Result := FIsOpen;
+end;
+
+procedure TZipFile.Close();
+begin
+  FZipFilename := '';
+  FPassword := '';
+  FIsOpen := False;
+end;
+
+function  TZipFile.OpenFile(const AFilename: string): TZipFileIO;
+begin
+  Result := TZipFileIO.Open(FZipFilename, AFilename, FPassword);
+end;
+
+function  TZipFile.OpenFileToStream(const AFilename: string): TStream;
+var
+  LZipStream: TZipFileIO;
+  LMemoryStream: TMemoryStream;
+begin
+  Result := nil;
+
+  LZipStream := OpenFile(AFilename);
+  try
+    if not Assigned(LZipStream) then Exit;
+    LMemoryStream := TMemoryStream.Create();
+    LMemoryStream.SetSize(LZipStream.Size);
+    LZipStream.Read(LMemoryStream.Memory, LMemoryStream.Size);
+    LMemoryStream.Position := 0;
+    Result := LMemoryStream;
+  finally
+    if Assigned(LZipStream) then
+      LZipStream.Free();
+  end;
+end;
+
+class function TZipFile.Init(const AZipFilename: string; const APassword: string=TZipFileIO.DEFAULT_PASSWORD): TZipFile;
+begin
+  Result := TZipFile.Create();
+  if not Result.Open(AZipFilename, APassword) then
+  begin
+    Result.Free();
+    Result := nil;
+  end;
+end;
+
+procedure TZipFile_BuildProgress(const ASender: Pointer; const AFilename: string; const AProgress: Integer; const ANewFile: Boolean);
+begin
+  if aNewFile then TConsole.PrintLn('');
+  TConsole.Print(TConsole.CR+'Adding %s(%d%s)...', [ExtractFileName(string(aFilename)), aProgress, '%']);
+end;
+
+class function TZipFile.Build(const AZipFilename, ADirectoryName: string; const ASender: Pointer; const AHandler: BuildProgress; const APassword: string): Boolean;
+var
+  LFileList: TStringDynArray;
+  LArchive: PAnsiChar;
+  LFilename: string;
+  LFilename2: PAnsiChar;
+  LPassword: PAnsiChar;
+  LZipFile: zipFile;
+  LZipFileInfo: zip_fileinfo;
+  LFile: System.Classes.TStream;
+  LCrc: Cardinal;
+  LBytesRead: Integer;
+  LFileSize: Int64;
+  LProgress: Single;
+  LNewFile: Boolean;
+  LHandler: BuildProgress;
+  LSender: Pointer;
+
+  function GetCRC32(aStream: System.Classes.TStream): Cardinal;
+  var
+    LBytesRead: Integer;
+    LBuffer: array of Byte;
+  begin
+    Result := crc32(0, nil, 0);
+    repeat
+      LBytesRead := AStream.Read(TUtils.GetTempStaticBuffer()^, TUtils.GetTempStaticBufferSize());
+      Result := crc32(Result, PBytef(TUtils.GetTempStaticBuffer()), LBytesRead);
+    until LBytesRead = 0;
+
+    LBuffer := nil;
+  end;
+
+begin
+  Result := False;
+
+  // check if directory exists
+  if not TDirectory.Exists(ADirectoryName) then Exit;
+
+  // init variabls
+  FillChar(LZipFileInfo, SizeOf(LZipFileInfo), 0);
+
+  // scan folder and build file list
+  LFileList := TDirectory.GetFiles(ADirectoryName, '*',
+    TSearchOption.soAllDirectories);
+
+  LArchive := PAnsiChar(AnsiString(AZipFilename));
+  LPassword := PAnsiChar(AnsiString(APassword));
+
+  // create a zip file
+  LZipFile := zipOpen64(LArchive, APPEND_STATUS_CREATE);
+
+  // init handler
+  LHandler := AHandler;
+  LSender := ASender;
+
+  if not Assigned(LHandler) then
+    LHandler := TZipFile_BuildProgress;
+
+  // process zip file
+  if LZipFile <> nil then
+  begin
+    // loop through all files in list
+    for LFilename in LFileList do
+    begin
+      // open file
+      LFile := TFile.OpenRead(LFilename);
+
+      // get file size
+      LFileSize := LFile.Size;
+
+      // get file crc
+      LCrc := GetCRC32(LFile);
+
+      // open new file in zip
+      LFilename2 := PAnsiChar(AnsiString(LFilename));
+      if ZipOpenNewFileInZip3_64(LZipFile, LFilename2, @LZipFileInfo, nil, 0,
+        nil, 0, '',  Z_DEFLATED, 9, 0, 15, 9, Z_DEFAULT_STRATEGY,
+        LPassword, LCrc, 1) = Z_OK then
+      begin
+        // make sure we start at star of stream
+        LFile.Position := 0;
+
+        LNewFile := True;
+
+        // read through file
+        repeat
+          // read in a buffer length of file
+          LBytesRead := LFile.Read(TUtils.GetTempStaticBuffer()^, TUtils.GetTempStaticBufferSize());
+
+          // write buffer out to zip file
+          zipWriteInFileInZip(LZipFile, TUtils.GetTempStaticBuffer(), LBytesRead);
+
+          // calc file progress percentage
+          LProgress := 100.0 * (LFile.Position / LFileSize);
+
+          // show progress
+          if Assigned(LHandler) then
+          begin
+            LHandler(LSender, LFilename, Round(LProgress), LNewFile);
+          end;
+
+          LNewFile := False;
+
+        until LBytesRead = 0;
+
+        // close file in zip
+        zipCloseFileInZip(LZipFile);
+
+        // free file stream
+        LFile.Free;
+      end;
+    end;
+
+    // close zip file
+    zipClose(LZipFile, '');
+  end;
+
+  // return true if new zip file exits
+  Result := TFile.Exists(LFilename);
+end;
+
 
 { TColor }
 function TColor.Make(const ARed, AGreen, ABlue, AAlpha: Byte): TColor;

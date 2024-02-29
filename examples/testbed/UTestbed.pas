@@ -283,9 +283,32 @@ begin
   donemem();
 end;
 
+procedure Test02();
+begin
+  if TZipFile.Build('Data.zip', 'res', nil, nil) then
+    TConsole.PrintLn(TConsole.CRLF+TConsole.CRLF+'Success!', TConsole.MAGENTA)
+  else
+    TConsole.PrintLn(TConsole.CRLF+TConsole.CRLF+'Failed!', TConsole.RED)
+end;
+
+procedure Test03();
+var
+  LZipFile: TZipFile;
+  LZipFileIO: TZipFileIO;
+begin
+  LZipFile := TZipFile.Init('Data.zip');
+  LZipFileIO := LZipFile.OpenFile('res/music/song01.ogg');
+  TConsole.PrintLn('Size: %d', [LZipFileIO.Size()]);
+  LZipFileIO.Free();
+  LZipFile.Free();
+end;
+
 procedure RunTests();
 begin
-  Test01();
+  TConsole.PrintLn(SGT_PROJECT+TConsole.CRLF, TConsole.DARKGREEN);
+  //Test01();
+  Test02();
+  //Test03();
   TConsole.Pause();
 end;
 

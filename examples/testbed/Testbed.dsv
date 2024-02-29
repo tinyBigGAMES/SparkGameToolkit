@@ -80,11 +80,11 @@ EditViewName=C:\Dev\Delphi\Projects\SGT\repo\main\examples\testbed\UTestbed.pas
 
 [ClosedView_QzpcRGV2XERlbHBoaVxQcm9qZWN0c1xTR1RccmVwb1xtYWluXHNyY1xTR1QuTGliLnBhcw==]
 Module=C:\Dev\Delphi\Projects\SGT\repo\main\src\SGT.Lib.pas
-CursorX=1
-CursorY=466
-TopLine=411
+CursorX=121
+CursorY=74
+TopLine=91
 LeftCol=1
-Elisions={{466,0},{624,11},{'Common Colors'}}
+Elisions={{567,0},{725,11},{'Common Colors'}}
 Bookmarks=
 EditViewName=C:\Dev\Delphi\Projects\SGT\repo\main\src\SGT.Lib.pas
 
@@ -113,6 +113,16 @@ Module=C:\Dev\Delphi\Projects\SGT\repo\main\examples\testbed\UTestbed.pas
 CursorX=12
 CursorY=289
 TopLine=26
+LeftCol=1
+Elisions=
+Bookmarks=
+EditViewName=C:\Dev\Delphi\Projects\SGT\repo\main\examples\testbed\UTestbed.pas
+[ClosedView_QzpcRGV2XERlbHBoaVxQcm9qZWN0c1xTR1RccmVwb1xtYWluXGV4YW1wbGVzXHRlc3RiZWRcVVRl
+c3RiZWQucGFz]
+Module=C:\Dev\Delphi\Projects\SGT\repo\main\examples\testbed\UTestbed.pas
+CursorX=3
+CursorY=309
+TopLine=23
 LeftCol=1
 Elisions=
 Bookmarks=
