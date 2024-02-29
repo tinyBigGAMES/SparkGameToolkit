@@ -74,6 +74,10 @@ const
   SGT_VERSION       = SGT_MAJOR_VERSION+'.'+SGT_MINOR_VERSION+'.'+SGT_PATCH_VERSION;
   SGT_PROJECT       = SGT_NAME+' ('+SGT_CODENAME+') v'+SGT_MAJOR_VERSION+'.'+SGT_MINOR_VERSION+'.'+SGT_PATCH_VERSION+', ' + SGT_DEVELOPER;
 
+{ Init }
+function InitLib(): Boolean;
+procedure QuitLib();
+
 type
   { TSeekMode }
   TSeekMode = (smStart, smCurrent, smEnd);
@@ -89,7 +93,10 @@ type
 
   { TBaseObject }
   TBaseObject = class
+  protected
+    FTag: string;
   public
+    property Tag: string read FTag write FTag;
     constructor Create(); virtual;
     destructor Destroy(); override;
     procedure Run(); virtual;
@@ -189,9 +196,9 @@ type
     class procedure Teletype(const AText: string; const AColor: DWORD; const AMargin: Integer; const AMinDelay: Integer; const AMaxDelay: Integer; const ABreakKey: Byte);
   end;
 
-  { TDeterministicTimer }
-  TDeterministicTimer = class
-  protected class var
+  { TFrameLimitTimer }
+  TFrameLimitTimer = record
+  private class var
     FLastTime: Double;
     FTargetTime: Double;
     FCurrentTime: Double;
@@ -202,19 +209,17 @@ type
     FFrameCount: Cardinal;
     FFramerate: Cardinal;
     FTargetFrameRate: Cardinal;
-  protected
-    class constructor Create;
-    class destructor Destroy;
   public const
     DEFAULT_FPS = 60;
   public
-    class procedure Init(const ATargetFrameRate: Cardinal=DEFAULT_FPS);
-    class function  TargetFrameRate(): Cardinal;
-    class function  TargetTime(): Double;
-    class procedure Reset();
-    class procedure Start();
-    class procedure Stop();
-    class function  FrameRate(): Cardinal;
+    class operator Initialize (out ADest: TFrameLimitTimer);
+    class procedure Init(const ATargetFrameRate: Cardinal=DEFAULT_FPS); static;
+    class function  TargetFrameRate(): Cardinal; static;
+    class function  TargetTime(): Double; static;
+    class procedure Reset(); static;
+    class procedure Start(); static;
+    class procedure Stop(); static;
+    class function  FrameRate(): Cardinal; static;
   end;
 
   { TTimer }
@@ -357,6 +362,7 @@ type
     class function  EaseValue(ACurrentTime: Double; AStartValue: Double; AChangeInValue: Double; ADuration: Double; AEaseType: TEaseType): Double;
     class function  EasePosition(AStartPos: Double; AEndPos: Double; ACurrentPos: Double; AEaseType: TEaseType): Double;
     class function  OBBIntersect(const AObbA, AObbB: TlgOBB): Boolean;
+    class function  UnitToScalarValue(const AValue, AMaxValue: Double): Double;
   end;
 
   { TAsyncProc }
@@ -459,10 +465,12 @@ type
   TIOMode = (iomRead, iomWrite);
 
   { TIO }
+  PIO = ^TIO;
   TIO = class(TBaseObject)
   public
     constructor Create(); override;
     destructor Destroy(); override;
+    function  Opened(): Boolean; virtual;
     procedure Close(); virtual;
     function  Size(): Int64; virtual;
     function  Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64; virtual;
@@ -480,6 +488,7 @@ type
     constructor Create(); override;
     destructor Destroy(); override;
     function  Duplicate(): TIO; virtual;
+    function  Opened(): Boolean; override;
     procedure Close(); override;
     function  Size(): Int64; override;
     function  Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64; override;
@@ -502,6 +511,7 @@ type
   public
     constructor Create(); override;
     destructor Destroy(); override;
+    function  Opened(): Boolean; override;
     procedure Close(); override;
     function  Size(): Int64; override;
     function  Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64; override;
@@ -524,6 +534,7 @@ type
   public
     constructor Create(); override;
     destructor Destroy(); override;
+    function  Opened(): Boolean; override;
     procedure Close(); override;
     function  Size(): Int64; override;
     function  Seek(const AOffset: Int64; const ASeek: TSeekMode): Int64; override;
@@ -543,8 +554,8 @@ type
   public type
     BuildProgress = procedure(const ASender: Pointer; const AFilename: string; const AProgress: Integer; const ANewFile: Boolean);
   public
-    constructor Create; override;
-    destructor Destroy; override;
+    constructor Create(); override;
+    destructor Destroy(); override;
     function  Open(const AZipFilename: string; const APassword: string=TZipFileIO.DEFAULT_PASSWORD): Boolean;
     function  IsOpen(): Boolean;
     procedure Close();
@@ -552,6 +563,90 @@ type
     function  OpenFileToStream(const AFilename: string): TStream;
     class function Init(const AZipFilename: string; const APassword: string=TZipFileIO.DEFAULT_PASSWORD): TZipFile;
     class function Build(const AZipFilename, ADirectoryName: string; const ASender: Pointer; const AHandler: BuildProgress; const APassword: string=TZipFileIO.DEFAULT_PASSWORD): Boolean;
+  end;
+
+  { TMaVFS }
+  PMaVFS = ^TMaVFS;
+  TMaVFS = record
+  private
+    Callbacks: ma_vfs_callbacks;
+    IO: TIO;
+  public
+    constructor Create(const AIO: TIO);
+  end;
+
+{ Audio }
+const
+  AUDIO_ERROR           = -1;
+  AUDIO_MUSIC_COUNT     = 256;
+  AUDIO_SOUND_COUNT     = 256;
+  AUDIO_CHANNEL_COUNT   = 16;
+  AUDIO_CHANNEL_DYNAMIC = -2;
+
+type
+  { TAudio }
+  TAudio = class
+  protected type
+    TMusic = record
+      Handle: ma_sound;
+      Loaded: Boolean;
+      Volume: Single;
+      Pan: Single;
+    end;
+    TSound = record
+      Handle: ma_sound;
+      InUse: Boolean;
+    end;
+    TChannel = record
+      Handle: ma_sound;
+      Reserved: Boolean;
+      InUse: Boolean;
+      Volume: Single;
+    end;
+  protected class var
+    FVFS: TMaVFS;
+    FEngineConfig: ma_engine_config;
+    FEngine: ma_engine;
+    FOpened: Boolean;
+    FPaused: Boolean;
+    FMusic: TMusic;
+    snd1,snd2,snd3: ma_sound;
+    FSound: array[0..AUDIO_SOUND_COUNT-1] of TSound;
+    FChannel: array[0..AUDIO_CHANNEL_COUNT-1] of TChannel;
+  protected
+    class function FindFreeSoundSlot: Integer;
+    class function FindFreeChannelSlot: Integer;
+    class function ValidChannel(const AChannel: Integer): Boolean;
+    class procedure InitData;
+    class constructor Create;
+    class destructor Destroy;
+  public
+    class function  Open: Boolean;
+    class procedure Close;
+    class function Opened: Boolean;
+    class procedure Update;
+    class function  GetPause: Boolean;
+    class procedure SetPause(const APause: Boolean);
+    class function  PlayMusic(const AInputStream: TIO; const AVolume: Single; const ALoop: Boolean; const APan: Single=0.0): Boolean;
+    class procedure UnloadMusic;
+    class function  GetMusicLoop: Boolean;
+    class procedure SetMusicLoop(const ALoop: Boolean);
+    class function  GetMusicVolume: Single;
+    class procedure SetMusicVolume(const AVolume: Single);
+    class function  GetMusicPan: Single;
+    class procedure SetMusicPan(const APan: Single);
+    class function  LoadSound(const AInputStream: TIO): Integer;
+    class procedure UnloadSound(var aSound: Integer);
+    class procedure UnloadAllSounds;
+    class function  PlaySound(const aSound, aChannel: Integer; const AVolume: Single; const ALoop: Boolean): Integer;
+    class procedure ReserveChannel(const aChannel: Integer; const aReserve: Boolean);
+    class procedure StopChannel(const aChannel: Integer);
+    class procedure SetChannelVolume(const aChannel: Integer; const AVolume: Single);
+    class function  GetChannelVolume(const aChannel: Integer): Single;
+    class procedure SetChannelPosition(const aChannel: Integer; const aX, aY: Single);
+    class procedure SetChannelLoop(const aChannel: Integer; const ALoop: Boolean);
+    class function  GetchannelLoop(const aChannel: Integer): Boolean;
+    class function  GetChannelPlaying(const aChannel: Integer): Boolean;
   end;
 
   { TColor }
@@ -724,8 +819,442 @@ const
   DARKSLATEBROWN      : TColor = (Red:30/255; Green:31/255; Blue:30/255; Alpha:1/255);
 {$ENDREGION}
 
+{ Window }
+
+{$REGION ' Key Codes '}
+const
+  KEY_UNKNOWN = -1;
+  KEY_SPACE = 32;
+  KEY_APOSTROPHE = 39;
+  KEY_COMMA = 44;
+  KEY_MINUS = 45;
+  KEY_PERIOD = 46;
+  KEY_SLASH = 47;
+  KEY_0 = 48;
+  KEY_1 = 49;
+  KEY_2 = 50;
+  KEY_3 = 51;
+  KEY_4 = 52;
+  KEY_5 = 53;
+  KEY_6 = 54;
+  KEY_7 = 55;
+  KEY_8 = 56;
+  KEY_9 = 57;
+  KEY_SEMICOLON = 59;
+  KEY_EQUAL = 61;
+  KEY_A = 65;
+  KEY_B = 66;
+  KEY_C = 67;
+  KEY_D = 68;
+  KEY_E = 69;
+  KEY_F = 70;
+  KEY_G = 71;
+  KEY_H = 72;
+  KEY_I = 73;
+  KEY_J = 74;
+  KEY_K = 75;
+  KEY_L = 76;
+  KEY_M = 77;
+  KEY_N = 78;
+  KEY_O = 79;
+  KEY_P = 80;
+  KEY_Q = 81;
+  KEY_R = 82;
+  KEY_S = 83;
+  KEY_T = 84;
+  KEY_U = 85;
+  KEY_V = 86;
+  KEY_W = 87;
+  KEY_X = 88;
+  KEY_Y = 89;
+  KEY_Z = 90;
+  KEY_LEFT_BRACKET = 91;
+  KEY_BACKSLASH = 92;
+  KEY_RIGHT_BRACKET = 93;
+  KEY_GRAVE_ACCENT = 96;
+  KEY_WORLD_1 = 161;
+  KEY_WORLD_2 = 162;
+  KEY_ESCAPE = 256;
+  KEY_ENTER = 257;
+  KEY_TAB = 258;
+  KEY_BACKSPACE = 259;
+  KEY_INSERT = 260;
+  KEY_DELETE = 261;
+  KEY_RIGHT = 262;
+  KEY_LEFT = 263;
+  KEY_DOWN = 264;
+  KEY_UP = 265;
+  KEY_PAGE_UP = 266;
+  KEY_PAGE_DOWN = 267;
+  KEY_HOME = 268;
+  KEY_END = 269;
+  KEY_CAPS_LOCK = 280;
+  KEY_SCROLL_LOCK = 281;
+  KEY_NUM_LOCK = 282;
+  KEY_PRINT_SCREEN = 283;
+  KEY_PAUSE = 284;
+  KEY_F1 = 290;
+  KEY_F2 = 291;
+  KEY_F3 = 292;
+  KEY_F4 = 293;
+  KEY_F5 = 294;
+  KEY_F6 = 295;
+  KEY_F7 = 296;
+  KEY_F8 = 297;
+  KEY_F9 = 298;
+  KEY_F10 = 299;
+  KEY_F11 = 300;
+  KEY_F12 = 301;
+  KEY_F13 = 302;
+  KEY_F14 = 303;
+  KEY_F15 = 304;
+  KEY_F16 = 305;
+  KEY_F17 = 306;
+  KEY_F18 = 307;
+  KEY_F19 = 308;
+  KEY_F20 = 309;
+  KEY_F21 = 310;
+  KEY_F22 = 311;
+  KEY_F23 = 312;
+  KEY_F24 = 313;
+  KEY_F25 = 314;
+  KEY_KP_0 = 320;
+  KEY_KP_1 = 321;
+  KEY_KP_2 = 322;
+  KEY_KP_3 = 323;
+  KEY_KP_4 = 324;
+  KEY_KP_5 = 325;
+  KEY_KP_6 = 326;
+  KEY_KP_7 = 327;
+  KEY_KP_8 = 328;
+  KEY_KP_9 = 329;
+  KEY_KP_DECIMAL = 330;
+  KEY_KP_DIVIDE = 331;
+  KEY_KP_MULTIPLY = 332;
+  KEY_KP_SUBTRACT = 333;
+  KEY_KP_ADD = 334;
+  KEY_KP_ENTER = 335;
+  KEY_KP_EQUAL = 336;
+  KEY_LEFT_SHIFT = 340;
+  KEY_LEFT_CONTROL = 341;
+  KEY_LEFT_ALT = 342;
+  KEY_LEFT_SUPER = 343;
+  KEY_RIGHT_SHIFT = 344;
+  KEY_RIGHT_CONTROL = 345;
+  KEY_RIGHT_ALT = 346;
+  KEY_RIGHT_SUPER = 347;
+  KEY_MENU = 348;
+  KEY_LAST = KEY_MENU;
+{$ENDREGION}
+
+{$REGION ' Mouse Buttons '}
+const
+  MOUSE_BUTTON_1 = 0;
+  MOUSE_BUTTON_2 = 1;
+  MOUSE_BUTTON_3 = 2;
+  MOUSE_BUTTON_4 = 3;
+  MOUSE_BUTTON_5 = 4;
+  MOUSE_BUTTON_6 = 5;
+  MOUSE_BUTTON_7 = 6;
+  MOUSE_BUTTON_8 = 7;
+  MOUSE_BUTTON_LAST = GLFW_MOUSE_BUTTON_8;
+  MOUSE_BUTTON_LEFT = GLFW_MOUSE_BUTTON_1;
+  MOUSE_BUTTON_RIGHT = GLFW_MOUSE_BUTTON_2;
+  MOUSE_BUTTON_MIDDLE = GLFW_MOUSE_BUTTON_3;
+{$ENDREGION}
+
+{$REGION ' Gamepads '}
+const
+  GAMEPAD_1 = 0;
+  GAMEPAD_2 = 1;
+  GAMEPAD_3 = 2;
+  GAMEPAD_4 = 3;
+  GAMEPAD_5 = 4;
+  GAMEPAD_6 = 5;
+  GAMEPAD_7 = 6;
+  GAMEPAD_8 = 7;
+  GAMEPAD_9 = 8;
+  GAMEPAD_10 = 9;
+  GAMEPAD_11 = 10;
+  GAMEPAD_12 = 11;
+  GAMEPAD_13 = 12;
+  GAMEPAD_14 = 13;
+  GAMEPAD_15 = 14;
+  GAMEPAD_16 = 15;
+  GAMEPAD_LAST = GAMEPAD_16;
+{$ENDREGION}
+
+{$REGION ' Gamepad Buttons '}
+const
+  GAMEPAD_BUTTON_A = 0;
+  GAMEPAD_BUTTON_B = 1;
+  GAMEPAD_BUTTON_X = 2;
+  GAMEPAD_BUTTON_Y = 3;
+  GAMEPAD_BUTTON_LEFT_BUMPER = 4;
+  GAMEPAD_BUTTON_RIGHT_BUMPER = 5;
+  GAMEPAD_BUTTON_BACK = 6;
+  GAMEPAD_BUTTON_START = 7;
+  GAMEPAD_BUTTON_GUIDE = 8;
+  GAMEPAD_BUTTON_LEFT_THUMB = 9;
+  GAMEPAD_BUTTON_RIGHT_THUMB = 10;
+  GAMEPAD_BUTTON_DPAD_UP = 11;
+  GAMEPAD_BUTTON_DPAD_RIGHT = 12;
+  GAMEPAD_BUTTON_DPAD_DOWN = 13;
+  GAMEPAD_BUTTON_DPAD_LEFT = 14;
+  GAMEPAD_BUTTON_LAST = GAMEPAD_BUTTON_DPAD_LEFT;
+  GAMEPAD_BUTTON_CROSS = GAMEPAD_BUTTON_A;
+  GAMEPAD_BUTTON_CIRCLE = GAMEPAD_BUTTON_B;
+  GAMEPAD_BUTTON_SQUARE = GAMEPAD_BUTTON_X;
+  GAMEPAD_BUTTON_TRIANGLE = GAMEPAD_BUTTON_Y;
+{$ENDREGION}
+
+{$REGiON ' Gamepad Axis '}
+const
+  GAMEPAD_AXIS_LEFT_X = 0;
+  GAMEPAD_AXIS_LEFT_Y = 1;
+  GAMEPAD_AXIS_RIGHT_X = 2;
+  GAMEPAD_AXIS_RIGHT_Y = 3;
+  GAMEPAD_AXIS_LEFT_TRIGGER = 4;
+  GAMEPAD_AXIS_RIGHT_TRIGGER = 5;
+  GAMEPAD_AXIS_LAST = GAMEPAD_AXIS_RIGHT_TRIGGER;
+{$ENDREGiON}
+
+type
+  { TInputState }
+  TInputState = (isPressed, isWasPressed, isWasReleased);
+
+  { TWindow }
+  TWindow = class(TBaseObject)
+  protected
+    FHandle: PGLFWwindow;
+    FSize: TSize;
+    FScaledSize: TSize;
+    FScale: TPoint;
+    FMaxTextureSize: GLint;
+    FKeyState: array [0..0, KEY_SPACE..KEY_LAST] of Boolean;
+    FMouseButtonState: array [0..0, MOUSE_BUTTON_1..MOUSE_BUTTON_MIDDLE] of Boolean;
+    FGamepadButtonState: array[0..0, GAMEPAD_BUTTON_A..GAMEPAD_BUTTON_LAST] of Boolean;
+    FVsync: Boolean;
+  public const
+    DEFAULT_WIDTH = 1920 div 2;
+    DEFAULT_HEIGHT = 1080 div 2;
+    DEFAULT_CENTER_WIDTH = DEFAULT_WIDTH div 2;
+    DEFAULT_CENTER_HEIGHT = DEFAULT_HEIGHT div 2;
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+    function  Open(const aTitle: string; const AWidth: Integer=DEFAULT_WIDTH; const AHeight: Integer=DEFAULT_HEIGHT; const AEnableVSync: Boolean=False): Boolean;
+    function  IsOpen(): Boolean;
+    procedure Close();
+    function  Ready(): Boolean;
+    function  GetHandle(): PGLFWwindow;
+    function  GetVSync(): Boolean;
+    procedure SetVSync(const AEnable: Boolean);
+    function  GetMaxTextureSize(): Integer;
+    function  GetTitle(): string;
+    procedure SetTitle(const ATitle: string);
+    function  ShouldClose(): Boolean;
+    procedure SetShouldClose(const AValue: Boolean);
+    procedure GetSize(var ASize: TSize);
+    procedure GetScaledSize(var ASize: TSize);
+    procedure GetScale(var AScale: TPoint);
+    procedure GetViewport(var AViewport: TRect); overload;
+    procedure GetViewport(X, Y, AWidth, AHeight: PSingle); overload;
+    procedure Clear(const AColor: TColor); overload;
+    procedure Clear(const ARed, AGreen, ABlue, AAlpha: Single); overload;
+    procedure StartFrame();
+    procedure EndFrame();
+    procedure StartDrawing();
+    procedure EndDrawing();
+    procedure DrawLine(const X1, Y1, X2, Y2: Single; const AColor: TColor; const AThickness: Single);
+    procedure DrawRect(const X, Y, AWidth, AHeight, AThickness: Single; const AColor: TColor; const AAngle: Single);
+    procedure DrawFilledRect(const X, Y, AWidth, AHeight: Single; const AColor: TColor; const AAngle: Single);
+    procedure DrawCircle(const X, Y, ARadius, AThickness: Single; const AColor: TColor);
+    procedure DrawFilledCircle(const X, Y, ARadius: Single; const AColor: TColor);
+    procedure DrawTriangle(const X1, Y1, X2, Y2, X3, Y3, AThickness: Single; const AColor: TColor);
+    procedure DrawFilledTriangle(const X1, Y1, X2, Y2, X3, Y3: Single; const AColor: TColor);
+    procedure DrawPolygon(const APoints: array of TPoint; const AThickness: Single; const AColor: TColor);
+    procedure DrawFilledPolygon(const APoints: array of TPoint; const AColor: TColor);
+    procedure DrawPolyline(const APoints: array of TPoint; const AThickness: Single; const AColor: TColor);
+    procedure ClearInput();
+    function  GetKey(const AKey: Integer; const AState: TInputState): Boolean;
+    function  GetMouseButton(const AButton: Byte; const AState: TInputState): Boolean;
+    procedure GetMousePos(const X, Y: PSingle); overload;
+    function  GetMousePos(): TPoint; overload;
+    procedure SetMousePos(const X, Y: Single);
+    function  GamepadPresent(const AGamepad: Byte): Boolean;
+    function  GetGamepadName(const AGamepad: Byte): string;
+    function  GetGamepadButton(const AGamepad, AButton: Byte; const AState: TInputState): Boolean;
+    function  GetGamepadAxisValue(const AGamepad, AAxis: Byte): Single;
+    function  SaveToFile(const AFilename: string): Boolean;
+    function  GetPixel(const X, Y: Single): TColor;
+    procedure SetPixel(const X, Y: Single; const AColor: TColor); overload;
+    procedure SetPixel(const X, Y: Single; const ARed, AGreen, ABlue, AAlpha: Byte); overload;
+    class function Init(const aTitle: string; const AWidth: Integer=DEFAULT_WIDTH; const AHeight: Integer=DEFAULT_HEIGHT): TWindow;
+  end;
+
+  { TTextureBlend }
+  TTextureBlend = (tbNone, tbAlpha, tbAdditiveAlpha);
+
+  { TTexture }
+  TTexture = class(TBaseObject)
+  protected
+    FHandle: Cardinal;
+    FChannels: Integer;
+    FSize: TSize;
+    FPivot: TPoint;
+    FAnchor: TPoint;
+    FBlend: TTextureBlend;
+    FPos: TPoint;
+    FScale: Single;
+    FColor: TColor;
+    FAngle: Single;
+    FHFlip: Boolean;
+    FVFlip: Boolean;
+    FRegion: TRect;
+    FLock: PByte;
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+    function   Allocate(const AWidth, AHeight: Integer): Boolean;
+    procedure  Fill(const AColor: TColor);
+    function   Load(const ARGBData: Pointer; const AWidth, AHeight: Integer): Boolean; overload;
+    function   Load(const AIO: TIO; const AColorKey: PColor=nil): Boolean; overload;
+    procedure  Unload();
+    function   GetChannels(): Integer;
+    function   GetSize(): TSize;
+    function   GetPivot(): TPoint;
+    procedure  SetPivot(const APoint: TPoint); overload;
+    procedure  SetPivot(const X, Y: Single); overload;
+    function   GetAnchor(): TPoint;
+    procedure  SetAnchor(const APoint: TPoint); overload;
+    procedure  SetAnchor(const X, Y: Single); overload;
+    function   GetBlend: TTextureBlend;
+    procedure  SetBlend(const AValue: TTextureBlend);
+    function   GetPos(): TPoint;
+    procedure  SetPos(const APos: TPoint); overload;
+    procedure  SetPos(const X, Y: Single); overload;
+    function   GetScale(): Single;
+    procedure  SetScale(const AScale: Single);
+    function   GetColor(): TColor;
+    procedure  SetColor(const AColor: TColor); overload;
+    procedure  SetColor(const ARed, AGreen, ABlue, AAlpha: Single); overload;
+    function   GetAngle(): Single;
+    procedure  SetAngle(const AAngle: Single);
+    function   GetHFlip: Boolean;
+    procedure  SetHFlip(const AFlip: Boolean);
+    function   GetVFlip: Boolean;
+    procedure  SetVFlip(const AFlip: Boolean);
+    function   GetRegion(): TRect;
+    procedure  SetRegion(const ARegion: TRect); overload;
+    procedure  SetRegion(const X, Y, AWidth, AHeight: Single); overload;
+    procedure  ResetRegion();
+    procedure  Draw();
+    procedure  DrawTiled(const AWindow: TWindow; const ADeltaX, ADeltaY: Single);
+    function   SaveToFile(const AFilename: string): Boolean;
+    function   Lock(): Boolean;
+    procedure  Unlock();
+    function   GetPixel(const X, Y: Single): TColor;
+    procedure  SetPixel(const X, Y: Single; const AColor: TColor); overload;
+    procedure  SetPixel(const X, Y: Single; const ARed, AGreen, ABlue, AAlpha: Byte); overload;
+    //function   CollideAABB(const ATexture: TlgTexture): Boolean;
+    function   CollideOBB(const ATexture: TTexture): Boolean;
+    class function LoadFromFile(const AFilename: string; const AColorKey: PColor=nil): TTexture;
+    class function LoadFromZipFile(const AZipFile: TZipFile; const AFilename: string; const AColorKey: PColor=nil): TTexture;
+  end;
+
+  { TFont }
+  TFont = class(TBaseObject)
+  public const
+    DEFAULT_GLYPHS = ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~™©';
+  protected type
+    PGlyph = ^TGlyph;
+    TGlyph = record
+      SrcRect: TRect;
+      DstRect: TRect;
+      XAdvance: Single;
+    end;
+  protected
+    FAtlasSize: Integer;
+    FAtlas: TTexture;
+    FBaseLine: Single;
+    FGlyph: TDictionary<Integer, TGlyph>;
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+    function  Load(const AWindow: TWindow; const AIO: TIO; const ASize: Cardinal; const AGlyphs: string=''): Boolean;
+    procedure Unload();
+    procedure DrawText(const AWindow: TWindow; const aX, aY: Single; const aColor: TColor; aHAlign: THAlign; const aMsg: string; const aArgs: array of const); overload;
+    procedure DrawText(const AWindow: TWindow; const aX: Single; var aY: Single; const aLineSpace: Single; const aColor: TColor; aHAlign: THAlign; const aMsg: string; const aArgs: array of const); overload;
+    function  TextLength(const aMsg: string; const aArgs: array of const): Single;
+    function  TextHeight(): Single;
+    function  SaveTexture(const AFilename: string): Boolean;
+    class function LoadFromFile(const AWindow: TWindow; const AFilename: string; const ASize: Cardinal; const AGlyphs: string=''): TFont;
+    class function LoadFromZipFile(const AWindow: TWindow; const AZipFile: TZipFile; const AFilename: string; const ASize: Cardinal; const AGlyphs: string=''): TFont;
+    class function LoadDefault(const AWindow: TWindow; const aSize: Cardinal; const aGlyphs: string=''): TFont;
+  end;
+
+  { TVideoStatus }
+  TVideoStatus = (vsStopped, vsPlaying);
+
+  { TVideo }
+  TVideo = class
+  public const
+    BUFFERSIZE = 1024;
+  private const
+    CSampleSize = 2304;
+    CSampleRate = 44100;
+  private type
+  private class var
+    FIO: TIO;
+    FStatus: TVideoStatus;
+    FStaticPlmBuffer: array[0..BUFFERSIZE] of byte;
+    LRingBuffer: TVirtualRingBuffer<Single>;
+    LDeviceConfig: ma_device_config;
+    LDevice: ma_device;
+    LPLM: Pplm_t;
+    FVolume: Single;
+    FLoop: Boolean;
+    LRGBABuffer: array of uint8;
+    FTexture: TTexture;
+  private
+    class constructor Create;
+    class destructor Destroy;
+  public
+    class function  Play(const AInputStream: TIO; const AVolume: Single; const ALoop: Boolean): Boolean;
+    class procedure Stop();
+    class function  Update(): Boolean;
+    class procedure Draw(const X, Y, AScale: Single);
+    class function  Status(): TVideoStatus;
+    class function  GetVolume(): Single;
+    class procedure SetVolume(const AVolume: Single);
+  end;
+
+var
+  Async: TAsync;
+  FrameLimitTimer: TFrameLimitTimer;
 
 implementation
+
+{$R SGT.Lib.res}
+
+{ Init }
+function InitLib(): Boolean;
+begin
+  Result := False;
+
+  if glfwInit() <> GLFW_TRUE then Exit;
+
+  TFrameLimitTimer.Reset();
+  TAsync.Clear();
+
+  Result := True;
+end;
+
+procedure QuitLib();
+begin
+  glfwTerminate();
+end;
 
 { TBaseObject }
 constructor TBaseObject.Create();
@@ -1433,15 +1962,13 @@ begin
   end;
 end;
 
-class constructor TDeterministicTimer.Create();
+
+class operator TFrameLimitTimer.Initialize (out ADest: TFrameLimitTimer);
 begin
+  Init();
 end;
 
-class destructor TDeterministicTimer.Destroy();
-begin
-end;
-
-class  procedure TDeterministicTimer.Init(const ATargetFrameRate: Cardinal);
+class  procedure TFrameLimitTimer.Init(const ATargetFrameRate: Cardinal);
 begin
   FLastTime := glfwGetTime();
   FLastFPSTime := FLastTime;
@@ -1452,17 +1979,17 @@ begin
   FEndtime := 0;
 end;
 
-class function  TDeterministicTimer.TargetFrameRate(): Cardinal;
+class function  TFrameLimitTimer.TargetFrameRate(): Cardinal;
 begin
   Result := FTargetFrameRate;
 end;
 
-class function  TDeterministicTimer.TargetTime(): Double;
+class function  TFrameLimitTimer.TargetTime(): Double;
 begin
   Result := FTargetTime;
 end;
 
-class procedure TDeterministicTimer.Reset();
+class procedure TFrameLimitTimer.Reset();
 begin
   FLastTime := glfwGetTime();
   FLastFPSTime := FLastTime;
@@ -1472,13 +1999,13 @@ begin
   FEndtime := 0;
 end;
 
-class procedure TDeterministicTimer.Start();
+class procedure TFrameLimitTimer.Start();
 begin
   FCurrentTime := glfwGetTime();
   FElapsedTime := FCurrentTime - FLastTime;
 end;
 
-class procedure TDeterministicTimer.Stop();
+class procedure TFrameLimitTimer.Stop();
 begin
   Inc(FFrameCount);
   if (FCurrentTime - FLastFPSTime >= 1.0) then
@@ -1500,7 +2027,7 @@ begin
     end;
 end;
 
-class function  TDeterministicTimer.FrameRate(): Cardinal;
+class function  TFrameLimitTimer.FrameRate(): Cardinal;
 begin
   Result := FFramerate;
 end;
@@ -2628,6 +3155,18 @@ begin
   Result := True;
 end;
 
+class function  TMath.UnitToScalarValue(const AValue, AMaxValue: Double): Double;
+var
+  LGain: Double;
+  LFactor: Double;
+  LVolume: Double;
+begin
+  LGain := (EnsureRange(AValue, 0.0, 1.0) * 50) - 50;
+  LFactor := Power(10, LGain * 0.05);
+  LVolume := EnsureRange(AMaxValue * LFactor, 0, AMaxValue);
+  Result := LVolume;
+end;
+
 constructor TAsyncThread.Create();
 begin
   inherited Create(True);
@@ -2654,7 +3193,7 @@ begin
   FFinished := True;
 end;
 
-{ --- TlgAsync -------------------------------------------------------------- }
+{ TAsync }
 class operator TAsync.Initialize(out ADest: TAsync);
 begin
   ADest.FQueue := TList<TAsyncThread>.Create;
@@ -3088,6 +3627,7 @@ begin
   end;
 end;
 
+{ TIO }
 constructor TIO.Create();
 begin
   inherited;
@@ -3100,6 +3640,11 @@ end;
 
 procedure TIO.Close();
 begin
+end;
+
+function  TIO.Opened(): Boolean;
+begin
+  Result := False;
 end;
 
 function  TIO.Size(): Int64;
@@ -3132,7 +3677,7 @@ begin
   Result := False;
 end;
 
-{ --- TlgMemoryStream ------------------------------------------------------- }
+{ TStreamIO }
 constructor TMemoryIO.Create();
 begin
   inherited;
@@ -3147,12 +3692,17 @@ end;
 
 function  TMemoryIO.Duplicate(): TIO;
 var
-  LStream: TMemoryIO;
+  LIO: TMemoryIO;
 begin
-  LStream := TMemoryIO.Create;
-  LStream.FHandle.CopyFrom(Self.FHandle);
-  LStream.Seek(0, smStart);
-  Result := LStream;
+  LIO := TMemoryIO.Create;
+  LIO.FHandle.CopyFrom(Self.FHandle);
+  LIO.Seek(0, smStart);
+  Result := LIO;
+end;
+
+function  TMemoryIO.Opened(): Boolean;
+begin
+  Result := Assigned(FHandle);
 end;
 
 procedure TMemoryIO.Close();
@@ -3220,7 +3770,7 @@ begin
   Result.FHandle.Position := 0;
 end;
 
-{ --- TlgFileStream --------------------------------------------------------- }
+{ TFileIO }
 constructor TFileIO.Create();
 begin
   inherited;
@@ -3230,6 +3780,11 @@ destructor TFileIO.Destroy();
 begin
   Close();
   inherited;
+end;
+
+function  TFileIO.Opened(): Boolean;
+begin
+  Result := Assigned(FHandle);
 end;
 
 procedure TFileIO.Close();
@@ -3292,7 +3847,10 @@ begin
     FHandle := nil;
   end;
 
-  Result := True;
+  Result := Assigned(FHandle);
+
+  if Result then
+    Tag := AFilename;
 end;
 
 class function TFileIO.Open(const AFilename: string; const AMode: TIOMode): TFileIO;
@@ -3305,7 +3863,7 @@ begin
   end;
 end;
 
-{ --- TlgZipStream ---------------------------------------------------------- }
+{ TZipFileIO }
 constructor TZipFileIO.Create();
 begin
   inherited;
@@ -3315,6 +3873,11 @@ destructor TZipFileIO.Destroy();
 begin
   Close();
   inherited;
+end;
+
+function  TZipFileIO.Opened(): Boolean;
+begin
+  Result := Assigned(FHandle);
 end;
 
 procedure TZipFileIO.Close();
@@ -3459,6 +4022,7 @@ begin
   FPassword := LPassword;
   FFilename := LFilename;
 
+  Tag  := AFilename;
   Result := True;
 end;
 
@@ -3682,6 +4246,481 @@ begin
   Result := TFile.Exists(LFilename);
 end;
 
+{ TMaVPS }
+function TMaVFS_OnOpen(AVFS: Pma_vfs; const AFilename: PUTF8Char;
+  AOpenMode: ma_uint32; AFile: Pma_vfs_file): ma_result; cdecl;
+var
+  LIO: TIO;
+begin
+  Result := MA_ERROR;
+  LIO := PMaVFS(AVFS).IO;
+  if not Assigned(LIO) then Exit;
+  if not LIO.Opened then Exit;
+  AFile^ := LIO;
+  Result := MA_SUCCESS;
+end;
+
+function TMaVFS_OnOpenW(AVFS: Pma_vfs; const AFilename: PWideChar;
+  AOpenMode: ma_uint32; pFile: Pma_vfs_file): ma_result; cdecl;
+begin
+  Result := MA_ERROR;
+end;
+
+function TMaVFS_OnClose(AVFS: Pma_vfs; file_: ma_vfs_file): ma_result; cdecl;
+var
+  LIO: TIO;
+begin
+  Result := MA_ERROR;
+  LIO := File_;
+  if not Assigned(LIO) then Exit;
+  if not LIO.Opened then Exit;
+  LIO.Free;
+  Result := MA_SUCCESS;
+end;
+
+function TMaVFS_OnRead(AVFS: Pma_vfs; file_: ma_vfs_file; AData: Pointer; ASizeInBytes: NativeUInt; ABytesRead: PNativeUInt): ma_result; cdecl;
+var
+  LIO: TIO;
+  LResult: Int64;
+begin
+  Result := MA_ERROR;
+  LIO := File_;
+  if not Assigned(LIO) then Exit;
+  if not LIO.Opened then Exit;
+  LResult := LIO.Read(AData, ASizeInBytes);
+  if LResult < 0 then Exit;
+  ABytesRead^ := LResult;
+  Result := MA_SUCCESS;
+end;
+
+function TMaVFS_OnWrite(AVFS: Pma_vfs; AVFSFile: ma_vfs_file; const AData: Pointer; ASizeInBytes: NativeUInt; ABytesWritten: PNativeUInt): ma_result; cdecl;
+begin
+  Result := MA_ERROR;
+end;
+
+function TMaVFS_OnSeek(AVFS: Pma_vfs; file_: ma_vfs_file; AOffset: ma_int64;
+  AOrigin: ma_seek_origin): ma_result; cdecl;
+var
+  LIO: TIO;
+begin
+  Result := MA_ERROR;
+  LIO := File_;
+  if not Assigned(LIO) then Exit;
+  if not LIO.Opened then Exit;
+  LIO.Seek(AOffset, TSeekMode(AOrigin));
+  Result := MA_SUCCESS;
+end;
+
+function TMaVFS_OnTell(AVFS: Pma_vfs; file_: ma_vfs_file; ACursor: Pma_int64): ma_result; cdecl;
+var
+  LIO: TIO;
+begin
+  Result := MA_ERROR;
+  LIO := File_;
+  if not Assigned(LIO) then Exit;
+  if not LIO.Opened then Exit;
+  ACursor^ := LIO.Tell;
+  Result := MA_SUCCESS;
+end;
+
+function TMaVFS_OnInfo(AVFS: Pma_vfs; AVFSFile: ma_vfs_file; AInfo: Pma_file_info): ma_result; cdecl;
+var
+  LIO: TIO;
+  LResult: Int64;
+begin
+  Result := MA_ERROR;
+  LIO := AVFSFile;
+  if not Assigned(LIO) then Exit;
+  if not LIO.Opened then Exit;
+
+  LResult := LIO.Size;
+  if LResult < 0 then Exit;
+
+  AInfo.sizeInBytes := LResult;
+  Result := MA_SUCCESS;
+end;
+
+constructor TMaVFS.Create(const AIO: TIO);
+begin
+  Self := Default(TMaVFS);
+  Callbacks.onopen := @TMaVFS_OnOpen;
+  Callbacks.onOpenW := @TMaVFS_OnOpenW;
+  Callbacks.onRead := @TMaVFS_OnRead;
+  Callbacks.onWrite := @TMaVFS_OnWrite;
+  Callbacks.onclose := @TMaVFS_OnClose;
+  Callbacks.onread := @TMaVFS_OnRead;
+  Callbacks.onseek := @TMaVFS_OnSeek;
+  Callbacks.onTell := @TMaVFS_OnTell;
+  Callbacks.onInfo := @TMaVFS_OnInfo;
+  IO := AIO;
+end;
+
+{ TAudio }
+class function TAudio.FindFreeSoundSlot: Integer;
+var
+  I: Integer;
+begin
+  Result := AUDIO_ERROR;
+  for I := 0 to AUDIO_SOUND_COUNT-1 do
+  begin
+    if not FSound[I].InUse then
+    begin
+      Result := I;
+      Exit;
+    end;
+  end;
+end;
+
+class function TAudio.FindFreeChannelSlot: Integer;
+var
+  I: Integer;
+begin
+  Result := AUDIO_ERROR;
+  for I := 0 to AUDIO_SOUND_COUNT-1 do
+  begin
+    if (not FChannel[I].InUse) and (not FChannel[I].Reserved) then
+    begin
+      Result := I;
+      Exit;
+    end;
+  end;
+end;
+
+class function TAudio.ValidChannel(const AChannel: Integer): Boolean;
+begin
+  Result := False;
+  if not InRange(AChannel, 0, AUDIO_CHANNEL_COUNT-1) then Exit;
+  if not FChannel[AChannel].InUse then Exit;
+  Result := True;
+end;
+
+class constructor TAudio.Create;
+begin
+  inherited;
+end;
+
+class destructor TAudio.Destroy;
+begin
+  Close;
+  inherited;
+end;
+
+class function  TAudio.Open: Boolean;
+begin
+  Result := False;
+  if Opened then Exit;
+
+  FVFS := TMaVFS.Create(nil);
+  FEngineConfig := ma_engine_config_init;
+  FEngineConfig.pResourceManagerVFS := @FVFS;
+  if ma_engine_init(@FEngineConfig, @FEngine) <> MA_SUCCESS then Exit;
+
+  FOpened := True;
+  Result := Opened;
+end;
+
+class procedure TAudio.Close;
+begin
+  if not Opened then Exit;
+  UnloadMusic;
+  UnloadAllSounds;
+  ma_engine_uninit(@FEngine);
+  InitData;
+end;
+
+class function TAudio.Opened: Boolean;
+begin
+  Result := FOpened;
+end;
+
+class procedure TAudio.InitData;
+var
+  I: Integer;
+begin
+  FEngine := Default(ma_engine);
+
+  for I := Low(FSound) to High(FSound) do
+    FSound[I] := Default(TSound);
+
+  for I := Low(FChannel) to High(FChannel) do
+    FChannel[i] := Default(TChannel);
+
+  FOpened := False;
+  FPaused := False;
+end;
+
+class procedure TAudio.Update;
+var
+  I: Integer;
+begin
+  if not Opened then Exit;
+
+  // check channels
+  for I := 0 to AUDIO_CHANNEL_COUNT-1 do
+  begin
+    if FChannel[I].InUse then
+    begin
+      if ma_sound_is_playing(@FChannel[I].Handle) = MA_FALSE then
+      begin
+        ma_sound_uninit(@FChannel[I].Handle);
+        FChannel[I].InUse := False;
+      end;
+    end;
+  end;
+end;
+
+class function  TAudio.GetPause: Boolean;
+begin
+  Result := FPaused;
+end;
+
+class procedure TAudio.SetPause(const APause: Boolean);
+begin
+  if not Opened then Exit;
+
+  case aPause of
+    True:
+    begin
+      if ma_engine_stop(@FEngine) = MA_SUCCESS then
+        FPaused := aPause;
+    end;
+
+    False:
+    begin
+      if ma_engine_start(@FEngine) = MA_SUCCESS then
+        FPaused := aPause;
+    end;
+  end;
+end;
+
+class function  TAudio.PlayMusic(const AInputStream: TIO; const AVolume: Single; const ALoop: Boolean; const APan: Single): Boolean;
+begin
+  Result := FAlse;
+  if not Opened then Exit;
+  if not Assigned(AInputStream) then Exit;
+  UnloadMusic;
+  FVFS.IO := AInputStream;
+  if ma_sound_init_from_file(@FEngine, TUtils.AsUtf8(AInputStream.Tag) , MA_SOUND_FLAG_STREAM, nil,
+    nil, @FMusic.Handle) <> MA_SUCCESS then
+  FVFS.IO := nil;
+  ma_sound_start(@FMusic);
+  FMusic.Loaded := True;
+  SetMusicLoop(ALoop);
+  SetMusicVolume(AVolume);
+  SetMusicPan(APan);
+end;
+
+class procedure TAudio.UnloadMusic;
+begin
+  if not Opened then Exit;
+  if not FMusic.Loaded then Exit;
+  ma_sound_stop(@FMusic.Handle);
+  ma_sound_uninit(@FMusic.Handle);
+  FMusic.Loaded := False;
+end;
+
+class function  TAudio.GetMusicLoop: Boolean;
+begin
+  Result := False;
+  if not Opened then Exit;
+  Result := Boolean(ma_sound_is_looping(@FMusic.Handle));
+end;
+
+class procedure TAudio.SetMusicLoop(const ALoop: Boolean);
+begin
+  if not Opened then Exit;
+  ma_sound_set_looping(@FMusic.Handle, Ord(ALoop))
+end;
+
+class function  TAudio.GetMusicVolume: Single;
+begin
+  Result := 0;
+  if not Opened then Exit;
+  Result := FMusic.Volume;
+end;
+
+class procedure TAudio.SetMusicVolume(const AVolume: Single);
+begin
+  if not Opened then Exit;
+  FMusic.Volume := AVolume;
+  ma_sound_set_volume(@FMusic.Handle, TMath.UnitToScalarValue(AVolume, 1));
+end;
+
+class function  TAudio.GetMusicPan: Single;
+begin
+  Result := ma_sound_get_pan(@FMusic.Handle);
+end;
+
+class procedure TAudio.SetMusicPan(const APan: Single);
+begin
+  ma_sound_set_pan(@FMusic.Handle, EnsureRange(APan, -1, 1));
+end;
+
+class function  TAudio.LoadSound(const AInputStream: TIO): Integer;
+var
+  LResult: Integer;
+begin
+  Result := AUDIO_ERROR;
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  LResult := FindFreeSoundSlot;
+  if LResult = AUDIO_ERROR then Exit;
+
+  FVFS.IO := AInputStream;
+  if ma_sound_init_from_file(@FEngine, TUtils.AsUtf8(AInputStream.Tag), 0, nil, nil,
+    @FSound[LResult].Handle) <> MA_SUCCESS then Exit;
+  FVFS.IO := nil;
+  FSound[LResult].InUse := True;
+  Result := LResult;
+end;
+
+class procedure TAudio.UnloadSound(var aSound: Integer);
+begin
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  if not InRange(aSound, 0, AUDIO_SOUND_COUNT-1) then Exit;
+  ma_sound_uninit(@FSound[aSound].Handle);
+  FSound[aSound].InUse := False;
+  aSound := AUDIO_ERROR;
+end;
+
+class procedure TAudio.UnloadAllSounds;
+var
+  I: Integer;
+begin
+  // close all channels
+  for I := 0 to AUDIO_CHANNEL_COUNT-1 do
+  begin
+    ma_sound_stop(@FChannel[I].Handle);
+    ma_sound_uninit(@FChannel[I].Handle);
+  end;
+
+  // close all sound buffers
+  for I := 0 to AUDIO_SOUND_COUNT-1 do
+  begin
+    ma_sound_uninit(@FSound[I].Handle);
+  end;
+end;
+
+class function  TAudio.PlaySound(const aSound, aChannel: Integer;
+  const AVolume: Single; const ALoop: Boolean): Integer;
+var
+  LResult: Integer;
+begin
+  Result := AUDIO_ERROR;
+
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  if not InRange(aSound, 0, AUDIO_SOUND_COUNT-1) then Exit;
+
+  if aChannel = AUDIO_CHANNEL_DYNAMIC then
+    LResult := FindFreeChannelSlot
+  else
+    begin
+      LResult := aChannel;
+      if not InRange(aChannel, 0, AUDIO_CHANNEL_COUNT-1) then Exit;
+      StopChannel(LResult);
+    end;
+  if LResult = AUDIO_ERROR then Exit;
+  if ma_sound_init_copy(@FEngine, @FSound[ASound].Handle, 0, nil,
+    @FChannel[LResult].Handle) <> MA_SUCCESS then Exit;
+  FChannel[LResult].InUse := True;
+
+  SetChannelVolume(LResult, aVolume);
+  SetChannelPosition(LResult, 0, 0);
+  SetChannelLoop(LResult, aLoop);
+
+  if ma_sound_start(@FChannel[LResult].Handle) <> MA_SUCCESS then
+  begin
+    StopChannel(LResult);
+    LResult := AUDIO_ERROR;
+  end;
+
+  Result := LResult;
+end;
+
+class procedure TAudio.ReserveChannel(const aChannel: Integer;
+  const aReserve: Boolean);
+begin
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  if not InRange(aChannel, 0, AUDIO_CHANNEL_COUNT-1) then Exit;
+  FChannel[aChannel].Reserved := aReserve;
+end;
+
+class procedure TAudio.StopChannel(const aChannel: Integer);
+begin
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  if not ValidChannel(aChannel) then Exit;
+
+  ma_sound_uninit(@FChannel[aChannel].Handle);
+  FChannel[aChannel].InUse := False;
+end;
+
+class procedure TAudio.SetChannelVolume(const aChannel: Integer;
+  const AVolume: Single);
+var
+  LVolume: Single;
+begin
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  if not InRange(aVolume, 0, 1) then Exit;
+  if not ValidChannel(aChannel) then Exit;
+
+  FChannel[aChannel].Volume := aVolume;
+  LVolume := TMath.UnitToScalarValue(aVolume, 1);
+  ma_sound_set_volume(@FChannel[aChannel].Handle, LVolume);
+end;
+
+class function  TAudio.GetChannelVolume(const aChannel: Integer): Single;
+begin
+Result := 0;
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  if not ValidChannel(aChannel) then Exit;
+  Result := FChannel[aChannel].Volume;
+end;
+
+class procedure TAudio.SetChannelPosition(const aChannel: Integer; const aX,
+  aY: Single);
+begin
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  if not ValidChannel(aChannel) then Exit;
+
+  ma_sound_set_position(@FChannel[aChannel].Handle, aX, 0, aY);
+end;
+
+class procedure TAudio.SetChannelLoop(const aChannel: Integer;
+  const ALoop: Boolean);
+begin
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  if not ValidChannel(aChannel) then Exit;
+
+  ma_sound_set_looping(@FChannel[aChannel].Handle, Ord(aLoop));
+end;
+
+class function  TAudio.GetchannelLoop(const aChannel: Integer): Boolean;
+begin
+  Result := False;
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  if not ValidChannel(aChannel) then Exit;
+
+  Result := Boolean(ma_sound_is_looping(@FChannel[aChannel].Handle));
+end;
+
+class function  TAudio.GetChannelPlaying(const aChannel: Integer): Boolean;
+begin
+  Result := False;
+  if not FOpened then Exit;
+  if FPaused then Exit;
+  if not ValidChannel(aChannel) then Exit;
+
+  Result := Boolean(ma_sound_is_playing(@FChannel[aChannel].Handle));
+end;
 
 { TColor }
 function TColor.Make(const ARed, AGreen, ABlue, AAlpha: Byte): TColor;
@@ -3726,6 +4765,1913 @@ begin
     Result := True
   else
     Result := False;
+end;
+
+{ --- TlgWindow ------------------------------------------------------------- }
+procedure  TlgWindow_OnSize(AWindow: PGLFWwindow; AWidth: Integer; AHeight: Integer); cdecl;
+var
+  LWindow: TWindow;
+begin
+  LWindow := glfwGetWindowUserPointer(AWindow);
+  LWindow.FScaledSize.Width := AWidth;
+  LWindow.FScaledSize.Height := AHeight;
+end;
+
+procedure TlgWindow_OnContentScale(AWindow: PGLFWwindow; AXScale: Single; AYScale: Single); cdecl;
+var
+  LWindow: TWindow;
+begin
+  LWindow := glfwGetWindowUserPointer(AWindow);
+  LWindow.FScale.x := AXScale;
+  LWindow.FScale.y := AXScale;
+end;
+
+constructor TWindow.Create();
+begin
+  inherited;
+end;
+
+destructor TWindow.Destroy();
+begin
+  Close();
+  inherited;
+end;
+
+function  TWindow.Open(const aTitle: string; const AWidth: Integer; const AHeight: Integer; const AEnableVSync: Boolean): Boolean;
+var
+  VideoMode: PGLFWvidmode;
+  LWidth, LHeight: Integer;
+begin
+  Result := False;
+
+  if Assigned(FHandle) then Exit;
+
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+  glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
+
+  glfwWindowHint(GLFW_SAMPLES, 4);
+
+  FHandle := glfwCreateWindow(AWidth, AHeight, TUtils.AsUtf8(ATitle), nil, nil);
+  if not Assigned(FHandle) then Exit;
+  glfwSetWindowUserPointer(FHandle, Self);
+  glfwSetWindowSizeCallback(FHandle, TlgWindow_OnSize);
+  glfwSetWindowContentScaleCallback(FHandle,TlgWindow_OnContentScale);
+  TUtils.SetDefaultIcon(FHandle);
+  VideoMode := glfwGetVideoMode(glfwGetPrimaryMonitor);
+  glfwGetWindowSize(FHandle, @LWidth, @LHeight);
+  glfwSetWindowPos(FHandle, (VideoMode.width - LWidth) div 2, (VideoMode.height - LHeight) div 2);
+  glfwMakeContextCurrent(FHandle);
+
+  SetVSync(AEnableVSync);
+
+  if not LoadOpenGL then
+  begin
+    glfwDestroyWindow(FHandle);
+    FHandle := nil;
+    Exit;
+  end;
+
+  // Enable Line Smoothing
+  glEnable(GL_LINE_SMOOTH);
+  glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
+  // Enable Polygon Smoothing
+  glEnable(GL_POLYGON_SMOOTH);
+  glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+
+  // Enable Point Smoothing
+  glEnable(GL_POINT_SMOOTH);
+  glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+
+  // Enable Multisampling for anti-aliasing (if supported)
+  glEnable(GL_MULTISAMPLE);
+
+  FSize.Width := AWidth;
+  FSize.Height := AHeight;
+
+  FScaledSize.Width := LWidth;
+  FScaledSize.Height := LHeight;
+
+  glfwGetWindowContentScale(FHandle, @FScale.X, @FScale.Y);
+
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE, @FMaxTextureSize);
+
+  glfwSetInputMode(FHandle, GLFW_STICKY_KEYS, GLFW_TRUE);
+  glfwSetInputMode(FHandle, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
+
+  SetMousePos(0,0);
+
+  Self.ClearInput();
+
+  TFrameLimitTimer.Reset();
+
+  Result := True;
+end;
+
+function  TWindow.IsOpen(): Boolean;
+begin
+  Result := False;
+  if not Assigned(FHandle) then Exit;
+  if glfwGetCurrentContext() <> FHandle then Exit;
+  Result := True;
+end;
+
+procedure TWindow.Close();
+begin
+  if Assigned(FHandle) then
+  begin
+    glfwMakeContextCurrent(nil);
+    glfwDestroyWindow(FHandle);
+    FHandle := nil;
+  end;
+  FSize := TMath.Size(0, 0);
+  FScaledSize := TMath.Size(0, 0);
+  FScale := TMath.Point(0,0);
+end;
+
+function  TWindow.Ready(): Boolean;
+begin
+  Result := False;
+  if not IsOpen then Exit;
+  Result := True;
+end;
+
+function  TWindow.GetVSync(): Boolean;
+begin
+  Result := FVsync;
+end;
+
+procedure TWindow.SetVSync(const AEnable: Boolean);
+begin
+  if AEnable then
+    glfwSwapInterval(1)
+  else
+    glfwSwapInterval(0);
+  FVSync := AEnable;
+end;
+
+function  TWindow.GetHandle(): PGLFWwindow;
+begin
+  Result := FHandle;
+end;
+
+function  TWindow.GetMaxTextureSize(): Integer;
+begin
+  Result := FMaxTextureSize;
+end;
+
+function  TWindow.GetTitle(): string;
+var
+  LHwnd: HWND;
+  LLen: Integer;
+  LTitle: PChar;
+begin
+  Result := '';
+  if not IsOpen then Exit;
+  LHwnd := glfwGetWin32Window(FHandle);
+  LLen := GetWindowTextLength(LHwnd);
+  GetMem(LTitle, LLen + 1);
+  try
+    GetWindowText(LHwnd, LTitle, LLen + 1);
+    Result := StrPas(LTitle);
+  finally
+    FreeMem(LTitle);
+  end;
+end;
+
+procedure TWindow.SetTitle(const ATitle: string);
+begin
+  if not IsOpen then Exit;
+  SetWindowText(glfwGetWin32Window(FHandle), ATitle);
+end;
+
+function  TWindow.ShouldClose(): Boolean;
+begin
+  Result := True;
+  if not IsOpen then Exit;
+  Result := Boolean(glfwWindowShouldClose(FHandle));
+end;
+
+procedure TWindow.SetShouldClose(const AValue: Boolean);
+begin
+  glfwSetWindowShouldClose(FHandle, Ord(AValue));
+end;
+
+procedure TWindow.GetSize(var ASize: TSize);
+begin
+  ASize := FSize;
+end;
+
+procedure TWindow.GetScaledSize(var ASize: TSize);
+begin
+  ASize := FScaledSize;
+end;
+
+procedure TWindow.GetScale(var AScale: TPoint);
+begin
+  AScale := FScale;
+end;
+
+procedure TWindow.GetViewport(var AViewport: TRect);
+begin
+  AViewport.X := 0;
+  AViewport.Y := 0;
+  AViewport.Width := Self.FSize.Width;
+  AViewport.Height := Self.FSize.Height;
+end;
+
+procedure TWindow.GetViewport(X, Y, AWidth, AHeight: PSingle);
+var
+  LViewport: TRect;
+begin
+  GetViewport(LViewport);
+  if Assigned(X) then X^ := LViewport.X;
+  if Assigned(Y) then Y^ := LViewport.Y;
+  if Assigned(AWidth) then AWidth^ := LViewport.Width;
+  if Assigned(AHeight) then AHeight^ := LViewport.Height;
+end;
+
+procedure TWindow.Clear(const AColor: TColor);
+begin
+  Clear(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+end;
+
+procedure TWindow.Clear(const ARed, AGreen, ABlue, AAlpha: Single);
+begin
+  if not IsOpen then Exit;
+ glClearColor(ARed, AGreen, ABlue, AAlpha);
+end;
+
+procedure TWindow.StartFrame();
+begin
+  TFrameLimitTimer.Start();
+  TAsync.Process();
+end;
+
+procedure TWindow.EndFrame();
+begin
+  TFrameLimitTimer.Stop();
+end;
+
+procedure TWindow.StartDrawing();
+begin
+  if not IsOpen then Exit;
+
+  glViewport(0, 0, Round(FScaledSize.Width), Round(FScaledSize.Height));
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, FScaledSize.Width, FScaledSize.Height, 0, -1, 1);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+  glScalef(FScale.X, FScale.Y, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
+end;
+
+procedure TWindow.EndDrawing();
+begin
+  if not IsOpen then Exit;
+
+  glfwSwapBuffers(FHandle);
+  glfwPollEvents;
+end;
+
+procedure TWindow.DrawLine(const X1, Y1, X2, Y2: Single; const AColor: TColor; const AThickness: Single);
+begin
+  if not IsOpen then Exit;
+
+  glLineWidth(AThickness);
+  glColor4f(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+  glBegin(GL_LINES);
+    glVertex2f(X1, Y1);
+    glVertex2f(X2, Y2);
+  glEnd;
+end;
+
+procedure TWindow.DrawRect(const X, Y, AWidth, AHeight, AThickness: Single; const AColor: TColor; const AAngle: Single);
+var
+  HalfWidth, HalfHeight: Single;
+begin
+  if not IsOpen then Exit;
+
+  HalfWidth := AWidth / 2;
+  HalfHeight := AHeight / 2;
+
+  glLineWidth(AThickness);
+  glColor4f(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+
+  glPushMatrix;  // Save the current matrix
+
+  // Translate to the center point
+  glTranslatef(X, Y, 0);
+
+  // Rotate around the center
+  glRotatef(AAngle, 0, 0, 1);
+
+  glBegin(GL_LINE_LOOP);
+    glVertex2f(-HalfWidth, -HalfHeight);      // Bottom-left corner
+    glVertex2f(HalfWidth, -HalfHeight);       // Bottom-right corner
+    glVertex2f(HalfWidth, HalfHeight);        // Top-right corner
+    glVertex2f(-HalfWidth, HalfHeight);       // Top-left corner
+  glEnd;
+
+  glPopMatrix;  // Restore the original matrix
+end;
+
+procedure TWindow.DrawFilledRect(const X, Y, AWidth, AHeight: Single; const AColor: TColor; const AAngle: Single);
+var
+  HalfWidth, HalfHeight: Single;
+begin
+  if not IsOpen then Exit;
+
+  HalfWidth := AWidth / 2;
+  HalfHeight := AHeight / 2;
+
+  glColor4f(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+
+  glPushMatrix;  // Save the current matrix
+
+  // Translate to the center point
+  glTranslatef(X, Y, 0);
+
+  // Rotate around the center
+  glRotatef(AAngle, 0, 0, 1);
+
+  glBegin(GL_QUADS);
+    glVertex2f(-HalfWidth, -HalfHeight);      // Bottom-left corner
+    glVertex2f(HalfWidth, -HalfHeight);       // Bottom-right corner
+    glVertex2f(HalfWidth, HalfHeight);        // Top-right corner
+    glVertex2f(-HalfWidth, HalfHeight);       // Top-left corner
+  glEnd;
+
+  glPopMatrix;  // Restore the original matrix
+end;
+
+
+procedure TWindow.DrawCircle(const X, Y, ARadius, AThickness: Single; const AColor: TColor);
+var
+  I: Integer;
+  LX, LY: Single;
+begin
+  if not IsOpen then Exit;
+
+  glLineWidth(AThickness);
+  glColor4f(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+  glBegin(GL_LINE_LOOP);
+    LX := X{ + ARadius};
+    LY := Y{ + ARadius};
+    for I := 0 to 360 do
+    begin
+      glVertex2f(LX + ARadius * TMath.AngleCos(I), LY - ARadius * TMath.AngleSin(I));
+    end;
+  glEnd();
+end;
+
+procedure TWindow.DrawFilledCircle(const X, Y, ARadius: Single; const AColor: TColor);
+var
+  I: Integer;
+  LX, LY: Single;
+begin
+  if not IsOpen then Exit;
+
+  glColor4f(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+  glBegin(GL_TRIANGLE_FAN);
+    LX := X{ + ARadius};
+    LY := Y{ + ARadius};
+    glVertex2f(LX, LY);
+    for i := 0 to 360 do
+    begin
+      glVertex2f(LX + ARadius * TMath.AngleCos(i), LY + ARadius * TMath.AngleSin(i));
+    end;
+  glEnd;
+end;
+
+procedure TWindow.DrawTriangle(const X1, Y1, X2, Y2, X3, Y3, AThickness: Single; const AColor: TColor);
+begin
+  if not IsOpen then Exit;
+
+  glLineWidth(AThickness);
+  glColor4f(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+  glBegin(GL_LINE_LOOP);
+    glVertex2f(X1, Y1);
+    glVertex2f(X2, Y2);
+    glVertex2f(X3, Y3);
+  glEnd;
+end;
+
+procedure TWindow.DrawFilledTriangle(const X1, Y1, X2, Y2, X3, Y3: Single; const AColor: TColor);
+begin
+  if not IsOpen then Exit;
+
+  glColor4f(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+  glBegin(GL_TRIANGLES);
+    glVertex2f(X1, Y1);
+    glVertex2f(X2, Y2);
+    glVertex2f(X3, Y3);
+  glEnd;
+end;
+
+procedure TWindow.DrawPolygon(const APoints: array of TPoint; const AThickness: Single; const AColor: TColor);
+var
+  I: Integer;
+begin
+  if not IsOpen then Exit;
+
+  glLineWidth(AThickness);
+  glColor4f(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+  glBegin(GL_LINE_LOOP);
+    for i := Low(APoints) to High(APoints) do
+    begin
+      glVertex2f(APoints[i].X, APoints[i].Y);
+    end;
+  glEnd;
+end;
+
+procedure TWindow.DrawFilledPolygon(const APoints: array of TPoint; const AColor: TColor);
+var
+  I: Integer;
+begin
+  if not IsOpen then Exit;
+
+  glColor4f(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+  glBegin(GL_POLYGON);
+  for I := Low(APoints) to High(APoints) do
+    begin
+      glVertex2f(APoints[i].X, APoints[i].Y);
+    end;
+  glEnd;
+end;
+
+procedure TWindow.DrawPolyline(const APoints: array of TPoint; const AThickness: Single; const AColor: TColor);
+var
+  I: Integer;
+begin
+  if not IsOpen then Exit;
+
+  glLineWidth(AThickness);
+  glColor4f(AColor.Red, AColor.Green, AColor.Blue, AColor.Alpha);
+  glBegin(GL_LINE_STRIP);
+    for I := Low(APoints) to High(APoints) do
+    begin
+      glVertex2f(APoints[i].X, APoints[i].Y);
+    end;
+  glEnd;
+end;
+
+procedure TWindow.ClearInput();
+begin
+  FillChar(FKeyState, SizeOf(FKeyState), 0);
+  FillChar(FMouseButtonState, SizeOf(FMouseButtonState), 0);
+  FillChar(FGamepadButtonState, SizeOf(FGamepadButtonState), 0);
+end;
+
+function  TWindow.GetKey(const AKey: Integer; const AState: TInputState): Boolean;
+
+  function IsKeyPressed(const AKey: Integer): Boolean;
+  begin
+    Result :=  Boolean(glfwGetKey(FHandle, AKey) = GLFW_PRESS);
+  end;
+
+begin
+  Result := False;
+  if not InRange(AKey,  KEY_SPACE, KEY_LAST) then Exit;
+
+  case AState of
+    isPressed:
+    begin
+      Result :=  IsKeyPressed(AKey);
+    end;
+
+    isWasPressed:
+    begin
+      if IsKeyPressed(AKey) and (not FKeyState[0, AKey]) then
+      begin
+        FKeyState[0, AKey] := True;
+        Result := True;
+      end
+      else if (not IsKeyPressed(AKey)) and (FKeyState[0, AKey]) then
+      begin
+        FKeyState[0, AKey] := False;
+        Result := False;
+      end;
+    end;
+
+    isWasReleased:
+    begin
+      if IsKeyPressed(AKey) and (not FKeyState[0, AKey]) then
+      begin
+        FKeyState[0, AKey] := True;
+        Result := False;
+      end
+      else if (not IsKeyPressed(AKey)) and (FKeyState[0, AKey]) then
+      begin
+        FKeyState[0, AKey] := False;
+        Result := True;
+      end;
+    end;
+  end;
+end;
+
+function  TWindow.GetMouseButton(const AButton: Byte; const AState: TInputState): Boolean;
+
+  function IsButtonPressed(const AKey: Integer): Boolean;
+  begin
+    Result :=  Boolean(glfwGetMouseButton(FHandle, AButton) = GLFW_PRESS);
+  end;
+
+begin
+  Result := False;
+  if not InRange(AButton,  MOUSE_BUTTON_1, MOUSE_BUTTON_MIDDLE) then Exit;
+
+  case AState of
+    isPressed:
+    begin
+      Result :=  IsButtonPressed(AButton);
+    end;
+
+    isWasPressed:
+    begin
+      if IsButtonPressed(AButton) and (not FMouseButtonState[0, AButton]) then
+      begin
+        FMouseButtonState[0, AButton] := True;
+        Result := True;
+      end
+      else if (not IsButtonPressed(AButton)) and (FMouseButtonState[0, AButton]) then
+      begin
+        FMouseButtonState[0, AButton] := False;
+        Result := False;
+      end;
+    end;
+
+    isWasReleased:
+    begin
+      if IsButtonPressed(AButton) and (not FMouseButtonState[0, AButton]) then
+      begin
+        FMouseButtonState[0, AButton] := True;
+        Result := False;
+      end
+      else if (not IsButtonPressed(AButton)) and (FMouseButtonState[0, AButton]) then
+      begin
+        FMouseButtonState[0, AButton] := False;
+        Result := True;
+      end;
+    end;
+  end;
+end;
+
+procedure TWindow.GetMousePos(const X, Y: PSingle);
+var
+  LX, LY: Double;
+begin
+  glfwGetCursorPos(FHandle, @LX, @LY);
+  if Assigned(X) then X^ := LX;
+  if Assigned(Y) then Y^ := LY;
+end;
+
+function  TWindow.GetMousePos(): TPoint;
+begin
+  GetMousePos(@Result.x, @Result.y);
+  Result.x := Result.x/FScale.x;
+  Result.y := Result.y/FScale.y;
+end;
+
+procedure TWindow.SetMousePos(const X, Y: Single);
+begin
+  glfwSetCursorPos(FHandle, X*FScale.x, Y*FScale.y);
+end;
+
+function  TWindow.GamepadPresent(const AGamepad: Byte): Boolean;
+begin
+  Result := Boolean(glfwJoystickIsGamepad(EnsureRange(Agamepad, GAMEPAD_1, GAMEPAD_LAST)));
+end;
+
+function  TWindow.GetGamepadName(const AGamepad: Byte): string;
+begin
+  Result := 'Not present';
+  if not GamepadPresent(AGamepad) then Exit;
+  Result := string(glfwGetGamepadName(AGamepad));
+end;
+
+function  TWindow.GetGamepadButton(const AGamepad, AButton: Byte; const AState: TInputState): Boolean;
+var
+  LState: GLFWgamepadstate;
+
+  function IsButtonPressed(const AButton: Byte): Boolean;
+  begin
+    Result :=  Boolean(LState.buttons[AButton]);
+  end;
+
+begin
+  Result := False;
+
+  if not Boolean(glfwGetGamepadState(EnsureRange(AGamepad, GAMEPAD_1, GAMEPAD_LAST), @LState)) then Exit;
+
+  case AState of
+    isPressed:
+    begin
+      Result :=  IsButtonPressed(AButton);
+    end;
+
+    isWasPressed:
+    begin
+      if IsButtonPressed(AButton) and (not FGamepadButtonState[0, AButton]) then
+      begin
+        FGamepadButtonState[0, AButton] := True;
+        Result := True;
+      end
+      else if (not IsButtonPressed(AButton)) and (FGamepadButtonState[0, AButton]) then
+      begin
+        FGamepadButtonState[0, AButton] := False;
+        Result := False;
+      end;
+    end;
+
+    isWasReleased:
+    begin
+      if IsButtonPressed(AButton) and (not FGamepadButtonState[0, AButton]) then
+      begin
+        FGamepadButtonState[0, AButton] := True;
+        Result := False;
+      end
+      else if (not IsButtonPressed(AButton)) and (FGamepadButtonState[0, AButton]) then
+      begin
+        FGamepadButtonState[0, AButton] := False;
+        Result := True;
+      end;
+    end;
+  end;
+end;
+
+function  TWindow.GetGamepadAxisValue(const AGamepad, AAxis: Byte): Single;
+var
+  LState: GLFWgamepadstate;
+begin
+  Result := 0;
+  if not Boolean(glfwGetGamepadState(EnsureRange(AGamepad, GAMEPAD_1, GAMEPAD_LAST), @LState)) then Exit;
+  Result := LState.axes[EnsureRange(AAxis, GAMEPAD_AXIS_LEFT_X, GLFW_GAMEPAD_AXIS_LAST)];
+end;
+
+function  TWindow.SaveToFile(const AFilename: string): Boolean;
+var
+  LBuffer: TVirtualBuffer;
+  LWidth,LHeight, LRow, LCol: Integer;
+  LTempByte: Byte;
+  LFilename: string;
+begin
+  Result := False;
+  if AFilename.IsEmpty then Exit;
+
+  LWidth := Round(FScaledSize.Width);
+  LHeight := Round(FScaledSize.Height);
+  LFilename := TPath.ChangeExtension(AFilename, 'png');
+  LBuffer := TVirtualBuffer.Create(LWidth * LHeight * 3);
+  try
+    glReadPixels(0, 0, LWidth, LHeight, GL_RGB, GL_UNSIGNED_BYTE, LBuffer.Memory);
+
+    for LRow := 0 to LHeight div 2 - 1 do
+    begin
+      for LCol := 0 to LWidth * 3 - 1 do
+      begin
+        Move((PByte(LBuffer.Memory) + (LRow * LWidth * 3 + LCol))^, LTempByte, 1);
+        Move((PByte(LBuffer.Memory) + ((LHeight - LRow - 1) * LWidth * 3 + LCol))^, (PByte(LBuffer.Memory) + (LRow * LWidth * 3 + LCol))^, 1);
+        Move(LTempByte, (PByte(LBuffer.Memory) + ((LHeight - LRow - 1) * LWidth * 3 + LCol))^, 1);
+      end;
+    end;
+
+    Result := Boolean(stbi_write_png(TUtils.AsUtf8(LFileName), LWidth, LHeight, 3, LBuffer.Memory, LWidth * 3));
+  finally
+    LBuffer.Free();
+  end;
+end;
+
+function  TWindow.GetPixel(const X, Y: Single): TColor;
+var
+  LPixel: array[0..3] of GLubyte;
+begin
+  glReadPixels(Round(X*FScale.x), Round(Y*FScale.y), 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, @LPixel);
+  Result.Red   := LPixel[0] / $FF;
+  Result.Green := LPixel[1] / $FF;
+  Result.Blue  := LPixel[2] / $FF;
+  Result.Alpha := LPixel[3] / $FF;
+end;
+
+procedure TWindow.SetPixel(const X, Y: Single; const AColor: TColor);
+begin
+  SetPixel(X, Y, Round(AColor.Red * $FF), Round(AColor.Green * $FF), Round(AColor.Blue * $FF), Round(AColor.Alpha * $FF));
+end;
+
+procedure TWindow.SetPixel(const X, Y: Single; const ARed, AGreen, ABlue, AAlpha: Byte);
+var
+  LPixel: array[0..3] of GLubyte;
+begin
+  LPixel[0] := ARed;
+  LPixel[1] := AGreen;
+  LPixel[2] := ABlue;
+  LPixel[3] := AAlpha;
+  glRasterPos2f(X, Y);
+  glDrawPixels(1, 1, GL_RGBA, GL_UNSIGNED_BYTE, @LPixel);
+end;
+
+
+class function TWindow.Init(const aTitle: string; const AWidth: Integer; const AHeight: Integer): TWindow;
+begin
+  Result := TWindow.Create();
+  if not Result.Open(ATitle, AWidth, AHeight) then
+  begin
+    Result.Free();
+    Result := nil;
+  end;
+end;
+
+{ TTexture }
+type
+  PRGBA = ^TRGBA;
+  TRGBA = packed record
+    R, G, B, A: Byte;
+  end;
+
+procedure ConvertMaskToAlpha(Data: Pointer; Width, Height: Integer; MaskColor: TColor);
+var
+  i: Integer;
+  PixelPtr: PRGBA;
+begin
+  PixelPtr := PRGBA(Data);
+
+  for i := 0 to Width * Height - 1 do
+  begin
+    if (PixelPtr^.R = Round(MaskColor.Red * 256)) and
+       (PixelPtr^.G = Round(MaskColor.Green * 256)) and
+       (PixelPtr^.B = Round(MaskColor.Blue * 256)) then
+      PixelPtr^.A := 0
+    else
+      PixelPtr^.A := 255;
+
+    Inc(PixelPtr);
+  end;
+end;
+
+function  TlgTexture_Read(AUser: Pointer; AData: PUTF8Char;
+  ASize: Integer): Integer; cdecl;
+var
+  LIO: TIO;
+begin
+  LIO := AUser;
+  Result := LIO.Read(AData, ASize);
+end;
+
+procedure TlgTexture_Skip(AUser: Pointer; AOffset: Integer); cdecl;
+var
+  LIO: TIO;
+begin
+  LIO := AUser;
+  LIO.Seek(AOffset, smCurrent);
+end;
+
+function  TlgTexture_Eof(AUser: Pointer): Integer; cdecl;
+var
+  LIO: TIO;
+begin
+  LIO := AUser;
+  Result := Ord(LIO.Eos);
+end;
+
+constructor TTexture.Create();
+begin
+  inherited;
+end;
+
+destructor TTexture.Destroy();
+begin
+  Unload;
+  inherited;
+end;
+
+function   TTexture.Allocate(const AWidth, AHeight: Integer): Boolean;
+var
+  Data: array of Byte;
+begin
+  Result := False;
+
+  if FHandle <> 0 then Exit;
+
+  // init RGBA data
+  SetLength(Data, AWidth * AHeight * 4);
+
+  glGenTextures(1, @FHandle);
+  glBindTexture(GL_TEXTURE_2D, FHandle);
+
+  // init the texture with transparent pixels
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, AWidth, AHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, @Data[0]);
+
+  // set texture parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  FSize.Width := AWidth;
+  FSize.Height := AHeight;
+  FChannels := 4;
+
+  SetBlend(tbAlpha);
+  SetColor(WHITE);
+  SetScale(1.0);
+  SetAngle(0.0);
+  SetHFlip(False);
+  SetVFlip(False);
+  SetPivot(0.5, 0.5);
+  SetAnchor(0.5, 0.5);
+  SetPos(0.0, 0.0);
+  ResetRegion();
+
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  Result := True;
+end;
+
+procedure  TTexture.Fill(const AColor: TColor);
+var
+  X,Y,LWidth,LHeight: Integer;
+begin
+  LWidth := Round(FSize.Width);
+  LHeight := Round(FSize.Height);
+
+  glBindTexture(GL_TEXTURE_2D, FHandle);
+
+  for X := 0 to LWidth-1 do
+  begin
+    for Y := 0 to LHeight-1 do
+    begin
+      glTexSubImage2D(GL_TEXTURE_2D, 0, X, Y, 1, 1, GL_RGBA, GL_FLOAT, @AColor);
+    end;
+  end;
+
+  glBindTexture(GL_TEXTURE_2D, 0);
+end;
+
+function   TTexture.Load(const ARGBData: Pointer; const AWidth, AHeight: Integer): Boolean;
+begin
+  Result := False;
+  if FHandle > 0 then Exit;
+  if not Allocate(AWidth, AHeight) then Exit;
+
+  glBindTexture(GL_TEXTURE_2D, FHandle);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, AWidth, AHeight, 0, GL_ALPHA, GL_UNSIGNED_BYTE, ARGBData);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  Result := True;
+end;
+
+function   TTexture.Load(const AIO: TIO; const AColorKey: PColor): Boolean;
+var
+  LCallbacks: stbi_io_callbacks;
+  LData: Pstbi_uc;
+  LWidth,LHeight,LChannels: Integer;
+begin
+  Result := False;
+  if FHandle > 0 then Exit;
+  if not Assigned(AIO) then Exit;
+
+  LCallbacks.read := TlgTexture_Read;
+  LCallbacks.skip := TlgTexture_Skip;
+  LCallbacks.eof := TlgTexture_Eof;
+
+  LData := stbi_load_from_callbacks(@LCallbacks, AIO, @LWidth, @LHeight, @LChannels, 4);
+  if not Assigned(LData) then Exit;
+
+  if Assigned(AColorKey) then
+    ConvertMaskToAlpha(LData, LWidth, LHeight, AColorKey^);
+
+  glGenTextures(1, @FHandle);
+  glBindTexture(GL_TEXTURE_2D, FHandle);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, LWidth, LHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, LData);
+
+  // Set texture parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  stbi_image_free(LData);
+
+  FSize.Width := LWidth;
+  FSize.Height := LHeight;
+  FChannels := LChannels;
+
+  SetBlend(tbAlpha);
+  SetColor(WHITE);
+  SetScale(1.0);
+  SetAngle(0.0);
+  SetHFlip(False);
+  SetVFlip(False);
+  SetPivot(0.5, 0.5);
+  SetAnchor(0.5, 0.5);
+  SetPos(0.0, 0.0);
+  ResetRegion();
+
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  Result := True;
+end;
+
+procedure  TTexture.Unload();
+begin
+  if FHandle = 0 then Exit;
+
+  glDeleteTextures(1, @FHandle);
+  FHandle := 0;
+  FSize := Default(TSize);
+  FChannels := 0;
+end;
+
+function   TTexture.GetChannels(): Integer;
+begin
+  Result := FChannels;
+end;
+
+function   TTexture.GetSize(): TSize;
+begin
+  Result := FSize;
+end;
+
+function   TTexture.GetPivot(): TPoint;
+begin
+  Result := FPivot;
+end;
+
+procedure  TTexture.SetPivot(const APoint: TPoint);
+begin
+  SetPivot(APoint.x, APoint.y);
+end;
+
+procedure  TTexture.SetPivot(const X, Y: Single);
+begin
+  FPivot.x := EnsureRange(X, 0, 1);
+  FPivot.y := EnsureRange(Y, 0, 1);
+end;
+
+function   TTexture.GetAnchor(): TPoint;
+begin
+  Result := FAnchor;
+end;
+
+procedure  TTexture.SetAnchor(const APoint: TPoint);
+begin
+  SetAnchor(APoint.x, APoint.y);
+end;
+
+procedure  TTexture.SetAnchor(const X, Y: Single);
+begin
+  FAnchor.x := EnsureRange(X, 0, 1);
+  FAnchor.y := EnsureRange(Y, 0, 1);
+end;
+
+function   TTexture.GetBlend: TTextureBlend;
+begin
+  Result := FBlend;
+end;
+
+procedure  TTexture.SetBlend(const AValue: TTextureBlend);
+begin
+  FBlend:= AValue;
+end;
+
+function   TTexture.GetPos(): TPoint;
+begin
+  Result := FPos;
+end;
+
+procedure  TTexture.SetPos(const APos: TPoint);
+begin
+  FPos := APos;
+end;
+
+procedure  TTexture.SetPos(const X, Y: Single);
+begin
+  FPos.x := X;
+  FPos.y := Y;
+end;
+
+function   TTexture.GetScale(): Single;
+begin
+  Result := FScale;
+end;
+
+procedure  TTexture.SetScale(const AScale: Single);
+begin
+  FScale := AScale;
+end;
+
+function   TTexture.GetColor(): TColor;
+begin
+  Result := FColor;
+end;
+
+procedure  TTexture.SetColor(const AColor: TColor);
+begin
+  FColor := AColor;
+end;
+
+procedure  TTexture.SetColor(const ARed, AGreen, ABlue, AAlpha: Single);
+begin
+  FColor.Red := EnsureRange(ARed, 0, 1);
+  FColor.Green := EnsureRange(AGreen, 0, 1);
+  FColor.Blue := EnsureRange(ABlue, 0, 1);
+  FColor.Alpha := EnsureRange(AAlpha, 0, 1);
+end;
+
+function   TTexture.GetAngle(): Single;
+begin
+  Result := FAngle;
+end;
+
+procedure  TTexture.SetAngle(const AAngle: Single);
+begin
+  FAngle := AAngle;
+  TMath.ClipValueF(FAngle, 0, 360, True);
+end;
+
+function   TTexture.GetHFlip(): Boolean;
+begin
+  Result := FHFlip;
+end;
+
+procedure  TTexture.SetHFlip(const AFlip: Boolean);
+begin
+  FHFlip := AFlip;
+end;
+
+function   TTexture.GetVFlip(): Boolean;
+begin
+  Result := FVFlip;
+end;
+
+procedure  TTexture.SetVFlip(const AFlip: Boolean);
+begin
+  FVFlip := AFlip;
+end;
+
+function   TTexture.GetRegion(): TRect;
+begin
+  Result := FRegion;
+end;
+
+procedure  TTexture.SetRegion(const ARegion: TRect);
+begin
+  SetRegion(ARegion.X, ARegion.Y, ARegion.Width, ARegion.Height);
+end;
+
+procedure  TTexture.SetRegion(const X, Y, AWidth, AHeight: Single);
+begin
+  FRegion.X := X;
+  FRegion.Y := Y;
+  FRegion.Width := AWidth;
+  FRegion.Height := AHeight;
+end;
+
+procedure  TTexture.ResetRegion();
+begin
+  FRegion.X := 0;
+  FRegion.Y := 0;
+  FRegion.Width := FSize.Width;
+  FRegion.Height := FSize.Height;
+end;
+
+procedure  TTexture.Draw();
+var
+  FlipX, FlipY: Single;
+begin
+  if FHandle = 0 then Exit;
+
+  glBindTexture(GL_TEXTURE_2D, FHandle);
+  glEnable(GL_TEXTURE_2D);
+
+  glPushMatrix();
+
+  // Set the color
+  glColor4f(FColor.Red, FColor.Green, FColor.Blue, FColor.Alpha);
+
+  // set blending
+  case FBlend of
+    tbNone: // no blending
+    begin
+      glDisable(GL_BLEND);
+      glBlendFunc(GL_ONE, GL_ZERO);
+    end;
+
+    tbAlpha: // alpha blending
+    begin
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    end;
+
+    tbAdditiveAlpha: // addeditve blending
+    begin
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    end;
+  end;
+
+  // Use the normalized anchor value
+  glTranslatef(FPos.X - (FAnchor.X * FRegion.Width * FScale), FPos.Y - (FAnchor.Y * FRegion.Height * FScale), 0);
+  glScalef(FScale, FScale, 1);
+
+  // Apply rotation using the normalized pivot value
+  glTranslatef(FPivot.X * FRegion.Width, FPivot.Y * FRegion.Height, 0);
+  glRotatef(FAngle, 0, 0, 1);
+  glTranslatef(-FPivot.X * FRegion.Width, -FPivot.Y * FRegion.Height, 0);
+
+  // Apply flip
+  if FHFlip then FlipX := -1 else FlipX := 1;
+  if FVFlip then FlipY := -1 else FlipY := 1;
+  glScalef(FlipX, FlipY, 1);
+
+  // Adjusted texture coordinates and vertices for the specified rectangle
+  glBegin(GL_QUADS);
+    glTexCoord2f(FRegion.X/FSize.Width, FRegion.Y/FSize.Height); glVertex2f(0, 0);
+    glTexCoord2f((FRegion.X + FRegion.Width)/FSize.Width, FRegion.Y/FSize.Height); glVertex2f(FRegion.Width, 0);
+    glTexCoord2f((FRegion.X + FRegion.Width)/FSize.Width, (FRegion.Y + FRegion.Height)/FSize.Height); glVertex2f(FRegion.Width, FRegion.Height);
+    glTexCoord2f(FRegion.X/FSize.Width, (FRegion.Y + FRegion.Height)/FSize.Height); glVertex2f(0, FRegion.Height);
+  glEnd();
+
+  glPopMatrix();
+
+  glDisable(GL_TEXTURE_2D);
+  glBindTexture(GL_TEXTURE_2D, 0);
+end;
+
+procedure  TTexture.DrawTiled(const AWindow: TWindow; const ADeltaX, ADeltaY: Single);
+var
+  LW,LH    : Integer;
+  LOX,LOY  : Integer;
+  LPX,LPY  : Single;
+  LFX,LFY  : Single;
+  LTX,LTY  : Integer;
+  LVPW,LVPH: Integer;
+  LVR,LVB  : Integer;
+  LIX,LIY  : Integer;
+  LViewport: TRect;
+begin
+  if FHandle = 0 then Exit;
+
+  SetPivot(0, 0);
+  SetAnchor(0, 0);
+
+  AWindow.GetViewport(LViewport);
+  LVPW := Round(LViewport.Width);
+  LVPH := Round(LViewport.Height);
+
+  LW := Round(FSize.Width);
+  LH := Round(FSize.Height);
+
+  LOX := -LW+1;
+  LOY := -LH+1;
+
+  LPX := aDeltaX;
+  LPY := aDeltaY;
+
+  LFX := LPX-floor(LPX);
+  LFY := LPY-floor(LPY);
+
+  LTX := floor(LPX)-LOX;
+  LTY := floor(LPY)-LOY;
+
+  if (LTX>=0) then LTX := LTX mod LW + LOX else LTX := LW - -LTX mod LW + LOX;
+  if (LTY>=0) then LTY := LTY mod LH + LOY else LTY := LH - -LTY mod LH + LOY;
+
+  LVR := LVPW;
+  LVB := LVPH;
+  LIY := LTY;
+
+  while LIY<LVB do
+  begin
+    LIX := LTX;
+    while LIX<LVR do
+    begin
+      //al_draw_bitmap(FHandle, LIX+LFX, LIY+LFY, 0);
+      SetPos(LIX+LFX, LIY+LFY);
+      Draw();
+      LIX := LIX+LW;
+    end;
+   LIY := LIY+LH;
+  end;
+end;
+
+function  TTexture.SaveToFile(const AFilename: string): Boolean;
+var
+  LData: array of Byte;
+  LFilename: string;
+begin
+  Result := False;
+  if FHandle = 0 then Exit;
+  if AFilename.IsEmpty then Exit;
+
+ // Allocate space for the texture data
+  SetLength(LData, Round(FSize.Width * FSize.Height * 4)); // Assuming RGBA format
+
+  // Bind the texture
+  glBindTexture(GL_TEXTURE_2D, FHandle);
+
+  // Read the texture data
+  glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, @LData[0]);
+
+  LFilename := TPath.ChangeExtension(AFilename, 'png');
+
+  // Use stb_image_write to save the texture to a PNG file
+  Result := Boolean(stbi_write_png(TUtils.AsUtf8(LFilename), Round(FSize.Width), Round(FSize.Height), 4, @LData[0], Round(FSize.Width * 4)));
+
+  // Unbind the texture
+  glBindTexture(GL_TEXTURE_2D, 0);
+end;
+
+function   TTexture.Lock(): Boolean;
+begin
+  Result := False;
+  if Assigned(FLock) then Exit;
+
+  GetMem(FLock, Round(FSize.Width*FSize.Height*4));
+  if not Assigned(FLock) then Exit;
+
+  glBindTexture(GL_TEXTURE_2D, FHandle);
+  glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, FLock);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  Result := True;
+end;
+
+procedure  TTexture.Unlock();
+begin
+  if not Assigned(FLock) then Exit;
+
+  glBindTexture(GL_TEXTURE_2D, FHandle);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, Round(FSize.Width), Round(FSize.Height), GL_RGBA, GL_UNSIGNED_BYTE, FLock);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  FreeMem(FLock);
+  FLock := nil;
+end;
+
+function   TTexture.GetPixel(const X, Y: Single): TColor;
+var
+  FOffset: Integer;
+  LPixel: Cardinal;
+begin
+  Result := BLANK;
+  if not Assigned(FLock) then Exit;
+
+  FOffset := Round((Y * FSize.Width + X) * 4);
+  LPixel := PCardinal(FLock + FOffset)^;
+
+  Result.Alpha := (LPixel shr 24) / $FF;
+  Result.Blue := ((LPixel shr 16) and $FF) / $FF;
+  Result.Green := ((LPixel shr 8) and $FF) / $FF;
+  Result.Red := (LPixel and $FF) / $FF;
+end;
+
+procedure  TTexture.SetPixel(const X, Y: Single; const AColor: TColor);
+var
+  FOffset: Integer;
+begin
+  if not Assigned(FLock) then Exit;
+
+  FOffset := Round((Y * FSize.Width + X) * 4);
+  PCardinal(FLock + FOffset)^ :=
+    (Round(AColor.Alpha*$FF) shl 24) or
+    (Round(AColor.Blue*$FF) shl 16) or
+    (Round(AColor.Green*$FF) shl 8) or
+    Round(AColor.Red*$FF);
+end;
+
+procedure  TTexture.SetPixel(const X, Y: Single; const ARed, AGreen, ABlue, AAlpha: Byte);
+var
+  FOffset: Integer;
+begin
+  if not Assigned(FLock) then Exit;
+
+  FOffset := Round((Y * FSize.Width + X) * 4);
+  PCardinal(FLock + FOffset)^ :=
+    (AAlpha shl 24) or
+    (ABlue shl 16) or
+    (AGreen shl 8) or
+    ARed;
+end;
+
+(*
+function   TlgTexture.CollideAABB(const ATexture: TlgTexture): Boolean;
+var
+  boxA, boxB: c2AABB;
+
+  function _c2v(x, y: Single): c2v;
+  begin
+    result.x := x;
+    result.y := y;
+  end;
+
+begin
+  // Set up AABB for this texture
+  boxA.min := _c2V(FPos.X - (FAnchor.X * FRegion.Width * FScale), FPos.Y - (FAnchor.Y * FRegion.Height * FScale));
+  boxA.max := _c2V((FPos.X - (FAnchor.X * FRegion.Width * FScale)) + FRegion.Width * FScale, (FPos.Y - (FAnchor.Y * FRegion.Height * FScale)) + FRegion.Height * FScale);
+
+  // Set up AABB for the other texture
+  boxB.min := _c2V(ATexture.FPos.X - (ATexture.FAnchor.X * ATexture.FRegion.Width * ATexture.FScale), ATexture.FPos.Y - (ATexture.FAnchor.Y * ATexture.FRegion.Height * ATexture.FScale));
+  boxB.max := _c2V((ATexture.FPos.X - (ATexture.FAnchor.X * ATexture.FRegion.Width * ATexture.FScale)) + ATexture.FRegion.Width * ATexture.FScale, (ATexture.FPos.Y - (ATexture.FAnchor.Y * ATexture.FRegion.Height * ATexture.FScale)) + ATexture.FRegion.Height * ATexture.FScale);
+
+  // Check for collision and return result
+  Result := Boolean(c2AABBtoAABB(boxA, boxB));
+end;
+*)
+
+function TTexture.CollideOBB(const ATexture: TTexture): Boolean;
+var
+  obbA, obbB: TlgOBB;
+begin
+  // Set up OBB for this texture
+  obbA.Center := TMath.Point(FPos.X, FPos.Y);
+  obbA.Extents := TMath.Point(FRegion.Width * FScale / 2, FRegion.Height * FScale / 2);
+  obbA.Rotation := FAngle;
+
+  // Set up OBB for the other texture
+  obbB.Center := TMath.Point(ATexture.FPos.X, ATexture.FPos.Y);
+  obbB.Extents := TMath.Point(ATexture.FRegion.Width * ATexture.FScale / 2, ATexture.FRegion.Height * ATexture.FScale / 2);
+  obbB.Rotation := ATexture.FAngle;
+
+  // Check for collision and return result
+  Result := TMath.OBBIntersect(obbA, obbB);
+end;
+
+class function TTexture.LoadFromFile(const AFilename: string; const AColorKey: PColor): TTexture;
+var
+  LIO: TIO;
+begin
+  Result := TTexture.Create();
+
+  LIO := TFileIO.Open(AFilename, iomRead);
+  try
+    Result.Load(LIO, AColorKey);
+  finally
+    LIO.Free();
+  end;
+end;
+
+class function TTexture.LoadFromZipFile(const AZipFile: TZipFile; const AFilename: string; const AColorKey: PColor): TTexture;
+var
+  LIO: TIO;
+begin
+  Result := nil;
+  if not Assigned(AZipFile) then Exit;
+  if not AZipFile.IsOpen() then Exit;
+
+  Result := TTexture.Create();
+
+  LIO := AZipFile.OpenFile(AFilename);
+  try
+    if not Assigned(LIO) then
+    begin
+      Result.Free();
+      Result := nil;
+      Exit;
+    end;
+    Result.Load(LIO, AColorKey);
+  finally
+    LIO.Free();
+  end;
+end;
+
+{ TFont }
+constructor TFont.Create();
+begin
+  inherited;
+  FGlyph := TDictionary<Integer, TGlyph>.Create();
+end;
+
+destructor TFont.Destroy();
+begin
+  Unload();
+  FGlyph.Free();
+  inherited;
+end;
+
+function  TFont.Load(const AWindow: TWindow; const AIO: TIO; const ASize: Cardinal; const AGlyphs: string): Boolean;
+
+var
+  LBuffer: TVirtualBuffer;
+  LChars: TVirtualBuffer;
+  LFileSize: Int64;
+  LFontInfo: stbtt_fontinfo;
+  NumOfGlyphs: Integer;
+  LGlyphChars: string;
+  LCodePoints: array of Integer;
+  LBitmap: array of Byte;
+  LPackContext: stbtt_pack_context;
+  LPackRange: stbtt_pack_range;
+  I: Integer;
+  LGlyph: TGlyph;
+  LChar: Pstbtt_packedchar;
+  LScale: Single;
+  LAscent: Integer;
+  LSize: Single;
+  LMaxTextureSize: Integer;
+  LDpiScale: Single;
+begin
+  Result := False;
+  if not Assigned(AWindow) then Exit;
+
+  LDpiScale := AWindow.FScale.y;
+  LMaxTextureSize := AWindow.FMaxTextureSize;
+
+  LSize := aSize * LDpiScale;
+  LFileSize := AIO.Size();
+  LBuffer := TVirtualBuffer.Create(LFileSize);
+  try
+    AIO.Read(LBuffer.Memory, LFileSize);
+    if stbtt_InitFont(@LFontInfo, LBuffer.Memory, 0) = 0 then Exit;
+    LGlyphChars := DEFAULT_GLYPHS + aGlyphs;
+    LGlyphChars := TUtils.RemoveDuplicates(LGlyphChars);
+    NumOfGlyphs := LGlyphChars.Length;
+    SetLength(LCodePoints, NumOfGlyphs);
+
+    for I := 1 to NumOfGlyphs do
+    begin
+      LCodePoints[I-1] := Integer(Char(LGlyphChars[I]));
+    end;
+
+    LChars := TVirtualBuffer.Create(SizeOf(stbtt_packedchar) * (NumOfGlyphs+1));
+    try
+      LPackRange.font_size := -LSize;
+      LPackRange.first_unicode_codepoint_in_range := 0;
+      LPackRange.array_of_unicode_codepoints := @LCodePoints[0];
+      LPackRange.num_chars := NumOfGlyphs;
+      LPackRange.chardata_for_range := LChars.Memory;
+      LPackRange.h_oversample := 1;
+      LPackRange.v_oversample := 1;
+
+      FAtlasSize := 32;
+
+      while True do
+      begin
+        SetLength(LBitmap, FAtlasSize * FAtlasSize);
+        stbtt_PackBegin(@LPackContext, @LBitmap[0], FAtlasSize, FAtlasSize, 0, 1, nil);
+        stbtt_PackSetOversampling(@LPackContext, 1, 1);
+        if stbtt_PackFontRanges(@LPackContext, LBuffer.Memory, 0, @LPackRange, 1) = 0  then
+          begin
+            LBitmap := nil;
+            stbtt_PackEnd(@LPackContext);
+            FAtlasSize := FAtlasSize * 2;
+            if (FAtlasSize > LMaxTextureSize) then
+            begin
+              raise Exception.Create(Format('Font texture too large. Max size: %d', [LMaxTextureSize]));
+            end;
+          end
+        else
+          begin
+            stbtt_PackEnd(@LPackContext);
+            break;
+          end;
+      end;
+
+      FAtlas := TTexture.Create();
+      FAtlas.Load(@LBitmap[0], FAtlasSize, FAtlasSize);
+      FAtlas.SetPivot(0,0);
+      FAtlas.SetAnchor(0,0);
+      FAtlas.SetBlend(tbAlpha);
+      FAtlas.SetColor(WHITE);
+
+      LBitmap := nil;
+
+      LScale := stbtt_ScaleForMappingEmToPixels(@LFontInfo, LSize);
+      stbtt_GetFontVMetrics(@LFontInfo, @LAscent, nil, nil);
+      FBaseline := LAscent * LScale;
+
+      FGlyph.Clear();
+      for I := Low(LCodePoints) to High(LCodePoints) do
+      begin
+        LChar := Pstbtt_packedchar(LChars.Memory);
+        Inc(LChar, I);
+
+        LGlyph.SrcRect.x := LChar.x0;
+        LGlyph.SrcRect.y := LChar.y0;
+        LGlyph.SrcRect.Width := LChar.x1-LChar.x0;
+        LGlyph.SrcRect.Height := LChar.y1-LChar.y0;
+
+        LGlyph.DstRect.x := 0 + LChar.xoff;
+        LGlyph.DstRect.y := 0 + LChar.yoff + FBaseline;
+        LGlyph.DstRect.Width := (LChar.x1-LChar.x0);
+        LGlyph.DstRect.Height := (LChar.y1-LChar.y0);
+
+        LGlyph.XAdvance := LChar.xadvance;
+
+        FGlyph.Add(LCodePoints[I], LGlyph);
+      end;
+
+      Result := True;
+
+    finally
+      LChars.Free();
+    end;
+
+  finally
+    LBuffer.Free();
+  end;
+end;
+
+procedure TFont.Unload();
+begin
+  if Assigned(FAtlas) then
+  begin
+    FAtlas.Free();
+    FAtlas := nil;
+  end;
+  FGlyph.Clear();
+end;
+
+procedure TFont.DrawText(const AWindow: TWindow; const aX, aY: Single; const aColor: TColor; aHAlign: THAlign; const aMsg: string; const aArgs: array of const);
+var
+  LText: string;
+  LChar: Integer;
+  LGlyph: TGlyph;
+  I, LLen: Integer;
+  LX, LY: Single;
+  LViewport: TRect;
+  LWidth: Single;
+begin
+  LText := Format(aMsg, aArgs);
+  LLen := LText.Length;
+
+  LX := aX;
+  LY := aY;
+
+  AWindow.GetViewport(LViewport);
+
+  case aHAlign of
+    haLeft:
+      begin
+      end;
+    haCenter:
+      begin
+        LWidth := TextLength(aMsg, aArgs);
+        LX := (LViewport.Width - LWidth)/2;
+      end;
+    haRight:
+      begin
+        LWidth := TextLength(aMsg, aArgs);
+        LX := LViewport.Width - LWidth;
+      end;
+  end;
+
+  FAtlas.SetColor(AColor);
+
+  for I := 1 to LLen do
+  begin
+    LChar := Integer(Char(LText[I]));
+    if FGlyph.TryGetValue(LChar, LGlyph) then
+    begin
+      LGlyph.DstRect.x := LGlyph.DstRect.x + LX;
+      LGlyph.DstRect.y := LGlyph.DstRect.y + LY;
+
+      FAtlas.SetRegion(LGlyph.SrcRect);
+      FAtlas.SetPos(LGlyph.DstRect.x, LGlyph.DstRect.y);
+      FAtlas.Draw();
+      LX := LX + LGlyph.XAdvance;
+    end;
+  end;
+end;
+
+procedure TFont.DrawText(const AWindow: TWindow; const aX: Single; var aY: Single; const aLineSpace: Single; const aColor: TColor; aHAlign: THAlign; const aMsg: string; const aArgs: array of const);
+begin
+  DrawText(AWindow, aX, aY, aColor, aHAlign, aMsg, aArgs);
+  aY := aY + FBaseLine + aLineSpace;
+end;
+
+function  TFont.TextLength(const aMsg: string; const aArgs: array of const): Single;
+var
+  LText: string;
+  LChar: Integer;
+  LGlyph: TGlyph;
+  I, LLen: Integer;
+  LWidth: Single;
+begin
+  LText := Format(aMsg, aArgs);
+  LLen := LText.Length;
+
+  LWidth := 0;
+
+  for I := 1 to LLen do
+  begin
+    LChar := Integer(Char(LText[I]));
+    if FGlyph.TryGetValue(LChar, LGlyph) then
+    begin
+      LWidth := LWidth + LGlyph.XAdvance;
+    end;
+  end;
+
+  Result := LWidth;
+end;
+
+function  TFont.TextHeight: Single;
+begin
+  Result := FBaseLine;
+end;
+
+function TFont.SaveTexture(const AFilename: string): Boolean;
+begin
+  Result := FAtlas.SaveToFile(AFilename);
+end;
+
+class function TFont.LoadFromFile(const AWindow: TWindow; const AFilename: string; const ASize: Cardinal; const AGlyphs: string): TFont;
+var
+  LIO: TIO;
+begin
+  Result := nil;
+  if not Assigned(AWindow) then Exit;
+
+  LIO := TFileIO.Open(AFilename, iomRead);
+  try
+    if not Assigned(LIO) then Exit;
+    Result := TFont.Create();
+    if not Assigned(Result) then Exit;
+    if not Result.Load(AWindow, LIO, ASize, AGlyphs) then
+    begin
+      Result.Free();
+      Result := nil;
+      Exit;
+    end;
+  finally
+    LIO.Free();
+  end;
+end;
+
+class function TFont.LoadFromZipFile(const AWindow: TWindow; const AZipFile: TZipFile; const AFilename: string; const ASize: Cardinal; const AGlyphs: string): TFont;
+var
+  LIO: TIO;
+begin
+  Result := nil;
+  if not Assigned(AWindow) then Exit;
+  if not Assigned(AZipFile) then Exit;
+  if not AZipFile.IsOpen() then Exit;
+
+  LIO := AZipFile.OpenFile(AFilename);
+  try
+    if not Assigned(LIO) then Exit;
+    Result := TFont.Create();
+    if not Assigned(Result) then Exit;
+    if not Result.Load(AWindow, LIO, ASize, AGlyphs) then
+    begin
+      Result.Free();
+      Result := nil;
+      Exit;
+    end;
+  finally
+    LIO.Free();
+  end;
+end;
+
+class function  TFont.LoadDefault(const AWindow: TWindow; const aSize: Cardinal; const aGlyphs: string=''): TFont;
+const
+  CDefaultFontResName = '0b0039416ae04dedaad41588e3751295';
+var
+  LResStream: TResourceStream;
+  LIO: TIO;
+begin
+  Result := nil;
+  if not Assigned(AWindow) then Exit;
+  if not TUtils.ResourceExist(HInstance, CDefaultFontResName) then Exit;
+
+  LResStream := TResourceStream.Create(HInstance, CDefaultFontResName, RT_RCDATA);
+  try
+    LIO := TMemoryIO.Open(LResStream.Memory, LResStream.Size);
+    try
+      Result := TFont.Create();
+      if not Assigned(Result) then Exit;
+      if not Result.Load(AWindow, LIO, ASize, AGlyphs) then
+      begin
+        Result.Free();
+        Result := nil;
+        Exit;
+      end;
+    finally
+      LIO.Free();
+    end;
+  finally
+    LResStream.Free();
+  end;
+end;
+
+{ Video }
+procedure TVideo_MADataCallback(ADevice: Pma_device; AOutput: Pointer;
+  AInput: Pointer; AFrameCount: ma_uint32); cdecl;
+var
+  LReadPtr: PSingle;
+  LFramesNeeded: Integer;
+begin
+  LFramesNeeded := AFrameCount * 2;
+  LReadPtr := PSingle(TVideo.LRingBuffer.DirectReadPointer(LFramesNeeded));
+
+  if TVideo.LRingBuffer.AvailableBytes >= LFramesNeeded then
+    begin
+      Move(LReadPtr^, AOutput^, LFramesNeeded * SizeOf(Single));
+    end
+  else
+    begin
+      FillChar(AOutput^, LFramesNeeded * SizeOf(Single), 0);
+    end;
+end;
+
+procedure TVideo_PLMAudioDecodeCallback(APLM: Pplm_t; ASamples: Pplm_samples_t;
+  AUserData: Pointer); cdecl;
+begin
+  TVideo.LRingBuffer.Write(ASamples^.interleaved, ASamples^.count*2);
+end;
+
+procedure TVideo_PLMVideoDecodeCallback(APLM: Pplm_t; AFrame: Pplm_frame_t;
+  AUserData: Pointer); cdecl;
+begin
+  // convert YUV to RGBA
+  plm_frame_to_rgba(AFrame, @TVideo.LRGBABuffer[0],
+    Round(TVideo.FTexture.FSize.Width*4));
+
+  // update OGL texture
+  glBindTexture(GL_TEXTURE_2D, TVideo.FTexture.FHandle);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, AFrame^.width, AFrame^.height,
+    GL_RGBA, GL_UNSIGNED_BYTE, TVideo.LRGBABuffer);
+end;
+
+procedure TVideo_PLMLoadBufferCallback(ABuffer: pplm_buffer_t;
+  AUserData: pointer); cdecl;
+var
+  LBytesRead: Int64;
+begin
+  // read data from inputstream
+  LBytesRead := TVideo.FIO.Read(@TVideo.FStaticPlmBuffer[0], TVideo.BUFFERSIZE);
+
+  // push LBytesRead to PLM buffer
+  if LBytesRead > 0 then
+    begin
+      plm_buffer_write(aBuffer, @TVideo.FStaticPlmBuffer[0], LBytesRead);
+    end
+  else
+    begin
+      // set status to stopped
+      TVideo.FStatus := vsStopped;
+    end;
+end;
+
+class constructor TVideo.Create;
+begin
+end;
+
+class destructor TVideo.Destroy;
+begin
+  Stop;
+end;
+
+class function  TVideo.Play(const AInputStream: TIO; const AVolume: Single; const ALoop: Boolean): Boolean;
+var
+  LBuffer: Pplm_buffer_t;
+begin
+  Result := False;
+
+  // set volume & loop status
+  FVolume := AVolume;
+  FLoop := ALoop;
+
+  // init ringbuffer
+  LRingBuffer := TVirtualRingBuffer<Single>.Create(CSampleRate*2);
+  if not Assigned(LRingBuffer) then Exit;
+
+  // init device for audio playback
+  LDeviceConfig := ma_device_config_init(ma_device_type_playback);
+  LDeviceConfig.playback.format := ma_format_f32;
+  LDeviceConfig.playback.channels := 2;
+  LDeviceConfig.sampleRate := CSampleRate;
+  LDeviceConfig.dataCallback := @TVideo_MADataCallback;
+  if ma_device_init(nil, @LDeviceConfig, @LDevice) <> MA_SUCCESS then Exit;
+  ma_device_start(@LDevice);
+  SetVolume(AVolume);
+
+  // set the input stream
+  FIO := AInputStream;
+  FStatus := vsPlaying;
+
+  // init plm buffer
+  LBuffer := plm_buffer_create_with_capacity(BUFFERSIZE);
+  if not Assigned(LBuffer) then
+  begin
+    ma_device_uninit(@LDevice);
+    LRingBuffer.Free;
+    Exit;
+  end;
+
+  plm_buffer_set_load_callback(LBuffer, TVideo_PLMLoadBufferCallback, Self);
+  LPLM := plm_create_with_buffer(LBuffer, 1);
+  if not Assigned(LPLM) then
+  begin
+    plm_buffer_destroy(LBuffer);
+    ma_device_uninit(@LDevice);
+    LRingBuffer.Free;
+    Exit;
+  end;
+
+  // create video render texture
+  FTexture := TTexture.Create;
+  FTexture.SetBlend(tbNone);
+  FTexture.Allocate(plm_get_width(LPLM), plm_get_height(LPLM));
+
+  // alloc the video rgba buffer
+  SetLength(LRGBABuffer,
+    Round(FTexture.GetSize.Width*FTexture.GetSize.Height*4));
+  if not Assigned(LRGBABuffer) then
+  begin
+    plm_buffer_destroy(LBuffer);
+    ma_device_uninit(@LDevice);
+    LRingBuffer.Free;
+    Exit;
+  end;
+
+  // set the audio lead time
+  plm_set_audio_lead_time(LPLM, (CSampleSize*2)/LDeviceConfig.sampleRate);
+
+  // set audio/video callbacks
+  plm_set_audio_decode_callback(LPLM, TVideo_PLMAudioDecodeCallback, Self);
+  plm_set_video_decode_callback(LPLM, TVideo_PLMVideoDecodeCallback, Self);
+
+  FTexture.SetPivot(0, 0);
+  FTexture.SetAnchor(0, 0);
+  FTexture.SetBlend(tbNone);
+
+  // return OK
+  Result := True;
+end;
+
+class procedure TVideo.Stop();
+begin
+  if not Assigned(LPLM) then Exit;
+
+  ma_device_stop(@LDevice);
+  ma_device_uninit(@LDevice);
+
+  plm_destroy(LPLM);
+
+  FIO.Free;
+  FTexture.Free;
+  LRingBuffer.Free;
+
+  LPLM := nil;
+  LRingBuffer := nil;
+  FStatus := vsStopped;
+  FTexture := nil;
+end;
+
+class function  TVideo.Update(): Boolean;
+begin
+  Result := False;
+  if not Assigned(LPLM) then Exit;
+  if FStatus = vsStopped then
+  begin
+    ma_device_stop(@LDevice);
+
+    if FLoop then
+    begin
+      plm_rewind(LPLM);
+      FIO.Seek(0, smStart);
+      LRingBuffer.Clear;
+      ma_device_start(@LDevice);
+      SetVolume(FVolume);
+      FStatus := vsPlaying;
+      plm_decode(LPLM, FrameLimitTimer.TargetTime());
+      Exit;
+    end;
+    Result := True;
+    Exit;
+  end;
+
+  plm_decode(LPLM, FrameLimitTimer.TargetTime());
+end;
+
+class procedure TVideo.Draw(const X, Y, AScale: Single);
+begin
+  if FStatus <> vsPlaying then Exit;
+  FTexture.SetPos(X, Y);
+  FTexture.SetScale(AScale);
+  FTexture.Draw();
+end;
+
+class function  TVideo.Status(): TVideoStatus;
+begin
+  Result := FStatus;
+end;
+
+class function  TVideo.GetVolume(): Single;
+begin
+  Result := FVolume;
+end;
+
+class procedure TVideo.SetVolume(const AVolume: Single);
+begin
+  FVolume := EnsureRange(AVolume, 0, 1);
+   ma_device_set_master_volume(@LDevice, TMath.UnitToScalarValue(FVolume, 1));
 end;
 
 end.

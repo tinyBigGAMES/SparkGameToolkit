@@ -52,6 +52,9 @@ procedure RunTests();
 
 implementation
 
+const
+  CZipFilename = 'Data.zip';
+
 var
   mem: TDictionary<Pointer, NativeUInt>;
   stat_total_allocs: NativeUInt;
@@ -303,13 +306,73 @@ begin
   LZipFile.Free();
 end;
 
+procedure Test04();
+begin
+  TAudio.Open();
+  TAudio.PlayMusic(TZipFileIO.Open(CZipFilename, 'res/music/song01.ogg'), 1.0, True);
+  readln;
+  TAudio.UnloadMusic;
+  TAudio.Close;
+end;
+
+procedure Test05();
+var
+  LWindow: TWindow;
+  LFont: TFont;
+begin
+  LWindow := TWindow.Init('SGT: Video Playback');
+
+  LFont := TFont.LoadDefault(LWindow, 12);
+
+  TAudio.Open();
+
+  //TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/tinyBigGAMES.mpg'), 1.0, True);
+  //TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/sample01.mpg'), 1.0, True);
+  //TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/Spark1.mpg'), 1.0, True);
+  TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/Spark2.mpg'), 1.0, True);
+
+  while not LWindow.ShouldClose() do
+  begin
+    LWindow.StartFrame();
+
+    if LWindow.GetKey(KEY_ESCAPE, isWasPressed) then
+      LWindow.SetShouldClose(True);
+
+    TVideo.Update();
+
+    LWindow.StartDrawing();
+
+    LWindow.Clear(DARKSLATEBROWN);
+
+    TVideo.Draw(0, 0, 0.5);
+
+    LFont.DrawText(LWindow, 3, 3, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+
+    LWindow.EndDrawing();
+
+    LWindow.EndFrame();
+
+  end;
+
+  TVideo.Stop();
+  TAudio.Close();
+  LFont.Free();
+  LWindow.Free();
+end;
+
 procedure RunTests();
 begin
+  if not InitLib() then Exit;
+
   TConsole.PrintLn(SGT_PROJECT+TConsole.CRLF, TConsole.DARKGREEN);
   //Test01();
-  Test02();
+  //Test02();
   //Test03();
+  //Test04();
+  Test05();
   TConsole.Pause();
+
+  QuitLib();
 end;
 
 end.
