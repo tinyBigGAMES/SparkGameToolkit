@@ -2733,6 +2733,59 @@ const
   ImGuiTabItemFlags_Unsorted = 4194304;
 
 type
+  NSVGpaintType = Integer;
+  PNSVGpaintType = ^NSVGpaintType;
+
+const
+  NSVG_PAINT_UNDEF = -1;
+  NSVG_PAINT_NONE = 0;
+  NSVG_PAINT_COLOR = 1;
+  NSVG_PAINT_LINEAR_GRADIENT = 2;
+  NSVG_PAINT_RADIAL_GRADIENT = 3;
+
+type
+  NSVGspreadType = Integer;
+  PNSVGspreadType = ^NSVGspreadType;
+
+const
+  NSVG_SPREAD_PAD = 0;
+  NSVG_SPREAD_REFLECT = 1;
+  NSVG_SPREAD_REPEAT = 2;
+
+type
+  NSVGlineJoin = Integer;
+  PNSVGlineJoin = ^NSVGlineJoin;
+
+const
+  NSVG_JOIN_MITER = 0;
+  NSVG_JOIN_ROUND = 1;
+  NSVG_JOIN_BEVEL = 2;
+
+type
+  NSVGlineCap = Integer;
+  PNSVGlineCap = ^NSVGlineCap;
+
+const
+  NSVG_CAP_BUTT = 0;
+  NSVG_CAP_ROUND = 1;
+  NSVG_CAP_SQUARE = 2;
+
+type
+  NSVGfillRule = Integer;
+  PNSVGfillRule = ^NSVGfillRule;
+
+const
+  NSVG_FILLRULE_NONZERO = 0;
+  NSVG_FILLRULE_EVENODD = 1;
+
+type
+  NSVGflags = Integer;
+  PNSVGflags = ^NSVGflags;
+
+const
+  NSVG_FLAGS_VISIBLE = 1;
+
+type
   // Forward declarations
   PPUTF8Char = ^PUTF8Char;
   PPByte = ^PByte;
@@ -3133,6 +3186,12 @@ type
   PImGuiTableColumnSettings = ^ImGuiTableColumnSettings;
   PImGuiTableSettings = ^ImGuiTableSettings;
   PImFontBuilderIO = ^ImFontBuilderIO;
+  PNSVGgradientStop = ^NSVGgradientStop;
+  PNSVGgradient = ^NSVGgradient;
+  PNSVGpaint = ^NSVGpaint;
+  PNSVGpath = ^NSVGpath;
+  PNSVGshape = ^NSVGshape;
+  PNSVGimage = ^NSVGimage;
 
   GLFWglproc = procedure(); cdecl;
 
@@ -8494,6 +8553,71 @@ type
   ImFontBuilderIO = record
     FontBuilder_Build: function(atlas: PImFontAtlas): Boolean; cdecl;
   end;
+
+  NSVGgradientStop = record
+    color: Cardinal;
+    offset: Single;
+  end;
+
+  NSVGgradient = record
+    xform: array [0..5] of Single;
+    spread: UTF8Char;
+    fx: Single;
+    fy: Single;
+    nstops: Integer;
+    stops: array [0..0] of NSVGgradientStop;
+  end;
+
+  P_anonymous_type_93 = ^_anonymous_type_93;
+  _anonymous_type_93 = record
+    case Integer of
+      0: (color: Cardinal);
+      1: (gradient: PNSVGgradient);
+  end;
+
+  NSVGpaint = record
+    &type: UTF8Char;
+    f2: _anonymous_type_93;
+  end;
+
+  NSVGpath = record
+    pts: PSingle;
+    npts: Integer;
+    closed: UTF8Char;
+    bounds: array [0..3] of Single;
+    next: PNSVGpath;
+  end;
+
+  NSVGshape = record
+    id: array [0..63] of UTF8Char;
+    fill: NSVGpaint;
+    stroke: NSVGpaint;
+    opacity: Single;
+    strokeWidth: Single;
+    strokeDashOffset: Single;
+    strokeDashArray: array [0..7] of Single;
+    strokeDashCount: UTF8Char;
+    strokeLineJoin: UTF8Char;
+    strokeLineCap: UTF8Char;
+    miterLimit: Single;
+    fillRule: UTF8Char;
+    flags: Byte;
+    bounds: array [0..3] of Single;
+    fillGradient: array [0..63] of UTF8Char;
+    strokeGradient: array [0..63] of UTF8Char;
+    xform: array [0..5] of Single;
+    paths: PNSVGpath;
+    next: PNSVGshape;
+  end;
+
+  NSVGimage = record
+    width: Single;
+    height: Single;
+    shapes: PNSVGshape;
+  end;
+
+  PNSVGrasterizer = Pointer;
+  PPNSVGrasterizer = ^PNSVGrasterizer;
 
 const
 
@@ -16828,6 +16952,27 @@ procedure ImGui_ImplGlfw_CharCallback(window: Pointer; c: Cardinal); cdecl;
 
 procedure ImGui_ImplGlfw_MonitorCallback(monitor: Pointer; event: Integer); cdecl;
   external SGT_DLL name _PU + 'ImGui_ImplGlfw_MonitorCallback';
+
+function nsvgParseFromFile(const filename: PUTF8Char; const units: PUTF8Char; dpi: Single): PNSVGimage; cdecl;
+  external SGT_DLL name _PU + 'nsvgParseFromFile';
+
+function nsvgParse(input: PUTF8Char; const units: PUTF8Char; dpi: Single): PNSVGimage; cdecl;
+  external SGT_DLL name _PU + 'nsvgParse';
+
+function nsvgDuplicatePath(p: PNSVGpath): PNSVGpath; cdecl;
+  external SGT_DLL name _PU + 'nsvgDuplicatePath';
+
+procedure nsvgDelete(image: PNSVGimage); cdecl;
+  external SGT_DLL name _PU + 'nsvgDelete';
+
+function nsvgCreateRasterizer(): PNSVGrasterizer; cdecl;
+  external SGT_DLL name _PU + 'nsvgCreateRasterizer';
+
+procedure nsvgRasterize(r: PNSVGrasterizer; image: PNSVGimage; tx: Single; ty: Single; scale: Single; dst: PByte; w: Integer; h: Integer; stride: Integer); cdecl;
+  external SGT_DLL name _PU + 'nsvgRasterize';
+
+procedure nsvgDeleteRasterizer(p1: PNSVGrasterizer); cdecl;
+  external SGT_DLL name _PU + 'nsvgDeleteRasterizer';
 
 implementation
 

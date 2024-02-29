@@ -59,6 +59,7 @@ var
   mem: TDictionary<Pointer, NativeUInt>;
   stat_total_allocs: NativeUInt;
   stat_total_mem: NativeUInt;
+  ZipFile: TZipFile;
 
 //void error_callback(int e, const char *d)
 procedure glfw_error_callback(e: integer; const d: pansichar); cdecl;
@@ -289,9 +290,9 @@ end;
 procedure Test02();
 begin
   if TZipFile.Build('Data.zip', 'res', nil, nil) then
-    TConsole.PrintLn(TConsole.CRLF+TConsole.CRLF+'Success!', TConsole.MAGENTA)
+    Console.PrintLn(Console.CRLF+Console.CRLF+'Success!', Console.MAGENTA)
   else
-    TConsole.PrintLn(TConsole.CRLF+TConsole.CRLF+'Failed!', TConsole.RED)
+    Console.PrintLn(Console.CRLF+Console.CRLF+'Failed!', Console.RED)
 end;
 
 procedure Test03();
@@ -301,35 +302,42 @@ var
 begin
   LZipFile := TZipFile.Init('Data.zip');
   LZipFileIO := LZipFile.OpenFile('res/music/song01.ogg');
-  TConsole.PrintLn('Size: %d', [LZipFileIO.Size()]);
+  Console.PrintLn('Size: %d', [LZipFileIO.Size()]);
   LZipFileIO.Free();
   LZipFile.Free();
 end;
 
 procedure Test04();
 begin
-  TAudio.Open();
-  TAudio.PlayMusic(TZipFileIO.Open(CZipFilename, 'res/music/song01.ogg'), 1.0, True);
+  Audio.Open();
+  Audio.PlayMusic(TZipFileIO.Open(CZipFilename, 'res/music/song01.ogg'), 1.0, True);
   readln;
-  TAudio.UnloadMusic;
-  TAudio.Close;
+  Audio.UnloadMusic;
+  Audio.Close;
 end;
 
 procedure Test05();
 var
   LWindow: TWindow;
   LFont: TFont;
+  LTexture: TTexture;
 begin
   LWindow := TWindow.Init('SGT: Video Playback');
 
   LFont := TFont.LoadDefault(LWindow, 12);
 
-  TAudio.Open();
+  Audio.Open();
+  Audio.PlayMusic(TZipFileIO.Open(CZipFilename, 'res/music/song01.ogg'), 0.7, False);
 
   //TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/tinyBigGAMES.mpg'), 1.0, True);
   //TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/sample01.mpg'), 1.0, True);
   //TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/Spark1.mpg'), 1.0, True);
-  TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/Spark2.mpg'), 1.0, True);
+  Video.Play(TZipFileIO.Open(CZipFilename, 'res/videos/Spark2.mpg'), 0.8, False);
+
+
+  LTexture := TTexture.LoadSVGFromZipFile(ZipFile, 'res/svg/tiger.svg');
+  LTexture.SetPos(LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT);
+  LTexture.SetScale(0.50);
 
   while not LWindow.ShouldClose() do
   begin
@@ -338,13 +346,15 @@ begin
     if LWindow.GetKey(KEY_ESCAPE, isWasPressed) then
       LWindow.SetShouldClose(True);
 
-    TVideo.Update();
+    Video.Update();
 
     LWindow.StartDrawing();
 
     LWindow.Clear(DARKSLATEBROWN);
 
-    TVideo.Draw(0, 0, 0.5);
+    Video.Draw(0, 0, 0.5);
+
+    LTexture.Draw();
 
     LFont.DrawText(LWindow, 3, 3, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
 
@@ -354,8 +364,10 @@ begin
 
   end;
 
-  TVideo.Stop();
-  TAudio.Close();
+  LTexture.Free();
+  Video.Stop();
+  Audio.UnloadMusic;
+  Audio.Close();
   LFont.Free();
   LWindow.Free();
 end;
@@ -363,15 +375,17 @@ end;
 procedure RunTests();
 begin
   if not InitLib() then Exit;
+  ZipFile := TZipFile.Init(CZipFilename);
 
-  TConsole.PrintLn(SGT_PROJECT+TConsole.CRLF, TConsole.DARKGREEN);
+  Console.PrintLn(SGT_PROJECT+Console.CRLF, Console.DARKGREEN);
   //Test01();
   //Test02();
   //Test03();
   //Test04();
   Test05();
-  TConsole.Pause();
+  Console.Pause();
 
+  ZipFile.Free();
   QuitLib();
 end;
 

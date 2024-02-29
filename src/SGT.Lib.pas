@@ -75,7 +75,7 @@ const
   SGT_PROJECT       = SGT_NAME+' ('+SGT_CODENAME+') v'+SGT_MAJOR_VERSION+'.'+SGT_MINOR_VERSION+'.'+SGT_PATCH_VERSION+', ' + SGT_DEVELOPER;
 
 { Init }
-function InitLib(): Boolean;
+function  InitLib(): Boolean;
 procedure QuitLib();
 
 type
@@ -102,8 +102,8 @@ type
     procedure Run(); virtual;
   end;
 
-  { TUtils }
-  TUtils = class
+  { Utils }
+  Utils = class
   private const
     CTempStaticBufferSize = 4096;
   private class var
@@ -142,8 +142,8 @@ type
     class function  RemoveQuotes(const AText: string): string;
   end;
 
-  { TConsole }
-  TConsole = class
+  { Console }
+  Console = class
   public const
     LF   = #10;
     CR   = #13;
@@ -182,22 +182,22 @@ type
     class function  IsKeyPressed(AKey: Byte): Boolean;
     class function  WasKeyReleased(AKey: Byte): Boolean;
     class function  WasKeyPressed(AKey: Byte): Boolean;
-    class procedure Pause(aColor: DWORD=TConsole.WHITE; const aMsg: string=''; const AForcePause: Boolean=False);
+    class procedure Pause(aColor: DWORD=Console.WHITE; const aMsg: string=''; const AForcePause: Boolean=False);
     class procedure ClearKeyboardBuffer();
     class function  ReadKey(): Char;
     class function  ReadLnX(const AAllowedChars: TSysCharSet; AMaxLength: Integer): string;
     class function  WrapTextEx(const ALine: string; AMaxCol: Integer; const ABreakChars: TSysCharSet=[' ', '-', ',', ':', #9]): string;
-    class procedure Print(const AMsg: string; const AArgs: array of const; const AColor: DWORD=TConsole.WHITE); overload;
-    class procedure Print(const AMsg: string; const AColor: DWORD=TConsole.WHITE); overload;
-    class procedure PrintLn(const AMsg: string; const AArgs: array of const; const AColor: DWORD=TConsole.WHITE); overload;
-    class procedure PrintLn(const AMsg: string; const AColor: DWORD=TConsole.WHITE); overload;
+    class procedure Print(const AMsg: string; const AArgs: array of const; const AColor: DWORD=Console.WHITE); overload;
+    class procedure Print(const AMsg: string; const AColor: DWORD=Console.WHITE); overload;
+    class procedure PrintLn(const AMsg: string; const AArgs: array of const; const AColor: DWORD=Console.WHITE); overload;
+    class procedure PrintLn(const AMsg: string; const AColor: DWORD=Console.WHITE); overload;
     class procedure PrintLn(); overload;
     class procedure Print(); overload;
     class procedure Teletype(const AText: string; const AColor: DWORD; const AMargin: Integer; const AMinDelay: Integer; const AMaxDelay: Integer; const ABreakKey: Byte);
   end;
 
-  { TFrameLimitTimer }
-  TFrameLimitTimer = record
+  { FrameLimitTimer }
+  FrameLimitTimer = class
   private class var
     FLastTime: Double;
     FTargetTime: Double;
@@ -209,10 +209,12 @@ type
     FFrameCount: Cardinal;
     FFramerate: Cardinal;
     FTargetFrameRate: Cardinal;
+  private
+    class constructor Create();
+    class destructor Destroy();
   public const
     DEFAULT_FPS = 60;
   public
-    class operator Initialize (out ADest: TFrameLimitTimer);
     class procedure Init(const ATargetFrameRate: Cardinal=DEFAULT_FPS); static;
     class function  TargetFrameRate(): Cardinal; static;
     class function  TargetTime(): Double; static;
@@ -316,7 +318,7 @@ type
   end;
 
   { TMath }
-  TMath = class
+  Math = class
   public const
     RADTODEG = 180.0 / PI;
     DEGTORAD = PI / 180.0;
@@ -383,8 +385,8 @@ type
     procedure Execute(); override;
   end;
 
-  { TAsync }
-  TAsync = record
+  { Async }
+  Async = class
   private type
     TBusyData = record
       Name: string;
@@ -394,9 +396,10 @@ type
   private class var
     FQueue: TList<TAsyncThread>;
     FBusy: TDictionary<string, TBusyData>;
+  private
+    class constructor Create();
+    class destructor Destroy();
   public
-    class operator Initialize(out ADest: TAsync);
-    class operator Finalize(var ADest: TAsync);
     class procedure Clear(); static;
     class procedure Process(); static;
     class procedure Run(const AName: string; const ABackgroundTask: TAsyncProc; const AWaitForgroundTask: TAsyncProc); static;
@@ -575,17 +578,15 @@ type
     constructor Create(const AIO: TIO);
   end;
 
-{ Audio }
-const
-  AUDIO_ERROR           = -1;
-  AUDIO_MUSIC_COUNT     = 256;
-  AUDIO_SOUND_COUNT     = 256;
-  AUDIO_CHANNEL_COUNT   = 16;
-  AUDIO_CHANNEL_DYNAMIC = -2;
+  { Audio }
+  Audio = class
+  public const
+    ERROR           = -1;
+    MUSIC_COUNT     = 256;
+    SOUND_COUNT     = 256;
+    CHANNEL_COUNT   = 16;
+    CHANNEL_DYNAMIC = -2;
 
-type
-  { TAudio }
-  TAudio = class
   protected type
     TMusic = record
       Handle: ma_sound;
@@ -611,8 +612,8 @@ type
     FPaused: Boolean;
     FMusic: TMusic;
     snd1,snd2,snd3: ma_sound;
-    FSound: array[0..AUDIO_SOUND_COUNT-1] of TSound;
-    FChannel: array[0..AUDIO_CHANNEL_COUNT-1] of TChannel;
+    FSound: array[0..SOUND_COUNT-1] of TSound;
+    FChannel: array[0..CHANNEL_COUNT-1] of TChannel;
   protected
     class function FindFreeSoundSlot: Integer;
     class function FindFreeChannelSlot: Integer;
@@ -1120,6 +1121,7 @@ type
     procedure  Fill(const AColor: TColor);
     function   Load(const ARGBData: Pointer; const AWidth, AHeight: Integer): Boolean; overload;
     function   Load(const AIO: TIO; const AColorKey: PColor=nil): Boolean; overload;
+    function   LoadSVG(const AIO: TIO; const AUnits: string='px'; const ADPI: Single=96.0; const AColorKey: PColor=nil): Boolean;
     procedure  Unload();
     function   GetChannels(): Integer;
     function   GetSize(): TSize;
@@ -1157,10 +1159,11 @@ type
     function   GetPixel(const X, Y: Single): TColor;
     procedure  SetPixel(const X, Y: Single; const AColor: TColor); overload;
     procedure  SetPixel(const X, Y: Single; const ARed, AGreen, ABlue, AAlpha: Byte); overload;
-    //function   CollideAABB(const ATexture: TlgTexture): Boolean;
     function   CollideOBB(const ATexture: TTexture): Boolean;
     class function LoadFromFile(const AFilename: string; const AColorKey: PColor=nil): TTexture;
     class function LoadFromZipFile(const AZipFile: TZipFile; const AFilename: string; const AColorKey: PColor=nil): TTexture;
+    class function LoadSVGFromFile(const AFilename: string;  const AUnits: string='px'; const ADPI: Single=96.0; const AColorKey: PColor=nil): TTexture;
+    class function LoadSVGFromZipFile(const AZipFile: TZipFile; const AFilename: string;  const AUnits: string='px'; const ADPI: Single=96.0; const AColorKey: PColor=nil): TTexture;
   end;
 
   { TFont }
@@ -1194,45 +1197,42 @@ type
     class function LoadDefault(const AWindow: TWindow; const aSize: Cardinal; const aGlyphs: string=''): TFont;
   end;
 
-  { TVideoStatus }
-  TVideoStatus = (vsStopped, vsPlaying);
-
-  { TVideo }
-  TVideo = class
+  { Video }
+  Video = class
   public const
     BUFFERSIZE = 1024;
+  public type
+    Status = (vsStopped, vsPlaying);
   private const
     CSampleSize = 2304;
     CSampleRate = 44100;
   private type
   private class var
     FIO: TIO;
-    FStatus: TVideoStatus;
+    FStatus: Status;
     FStaticPlmBuffer: array[0..BUFFERSIZE] of byte;
-    LRingBuffer: TVirtualRingBuffer<Single>;
-    LDeviceConfig: ma_device_config;
-    LDevice: ma_device;
-    LPLM: Pplm_t;
+    FRingBuffer: TVirtualRingBuffer<Single>;
+    FDeviceConfig: ma_device_config;
+    FDevice: ma_device;
+    FPLM: Pplm_t;
     FVolume: Single;
     FLoop: Boolean;
-    LRGBABuffer: array of uint8;
+    FRGBABuffer: array of uint8;
     FTexture: TTexture;
   private
     class constructor Create;
     class destructor Destroy;
   public
-    class function  Play(const AInputStream: TIO; const AVolume: Single; const ALoop: Boolean): Boolean;
+    class function  Play(const AIO: TIO; const AVolume: Single; const ALoop: Boolean): Boolean;
     class procedure Stop();
     class function  Update(): Boolean;
     class procedure Draw(const X, Y, AScale: Single);
-    class function  Status(): TVideoStatus;
+    class function  GetStatus(): Status;
     class function  GetVolume(): Single;
     class procedure SetVolume(const AVolume: Single);
+    class function  GetLooping(): Boolean;
+    class procedure SetLooping(const ALoop: Boolean);
   end;
-
-var
-  Async: TAsync;
-  FrameLimitTimer: TFrameLimitTimer;
 
 implementation
 
@@ -1245,8 +1245,8 @@ begin
 
   if glfwInit() <> GLFW_TRUE then Exit;
 
-  TFrameLimitTimer.Reset();
-  TAsync.Clear();
+  FrameLimitTimer.Reset();
+  Async.Clear();
 
   Result := True;
 end;
@@ -1272,8 +1272,8 @@ begin
   inherited;
 end;
 
-{ TUtils }
-class constructor TUtils.Create();
+{ Utils }
+class constructor Utils.Create();
 begin
   // turn on memory leak detection
   ReportMemoryLeaksOnShutdown := True;
@@ -1283,43 +1283,43 @@ begin
   FCriticalSection := TCriticalSection.Create();
 end;
 
-class destructor TUtils.Destroy();
+class destructor Utils.Destroy();
 begin
   // free critical section object
   FCriticalSection.Free();
 end;
 
-class function  TUtils.AsUTF8(const AText: string): Pointer;
+class function  Utils.AsUTF8(const AText: string): Pointer;
 begin
   Result := FMarshaller.AsUtf8(AText).ToPointer;
 end;
 
-class function  TUtils.GetTempStaticBuffer(): PByte;
+class function  Utils.GetTempStaticBuffer(): PByte;
 begin
   Result := @FTempStaticBuffer[0];
 end;
 
-class function  TUtils.GetTempStaticBufferSize(): Integer;
+class function  Utils.GetTempStaticBufferSize(): Integer;
 begin
   Result := CTempStaticBufferSize;
 end;
 
-class function  TUtils.ResourceExist(const AInstance: HINST; const AResName: string): Boolean;
+class function  Utils.ResourceExist(const AInstance: HINST; const AResName: string): Boolean;
 begin
   Result := Boolean((FindResource(HInstance, PChar(AResName), RT_RCDATA) <> 0));
 end;
 
-class procedure TUtils.EnterCriticalSection();
+class procedure Utils.EnterCriticalSection();
 begin
   FCriticalSection.Enter;
 end;
 
-class procedure TUtils.LeaveCriticalSection();
+class procedure Utils.LeaveCriticalSection();
 begin
   FCriticalSection.Leave;
 end;
 
-class procedure TUtils.SetDefaultIcon(AWindow: HWND);
+class procedure Utils.SetDefaultIcon(AWindow: HWND);
 var
   IconHandle: HICON;
 begin
@@ -1330,12 +1330,12 @@ begin
   end;
 end;
 
-class procedure TUtils.SetDefaultIcon(AWindow: PGLFWwindow);
+class procedure Utils.SetDefaultIcon(AWindow: PGLFWwindow);
 begin
   SetDefaultIcon(glfwGetWin32Window(AWindow))
 end;
 
-class function TUtils.RemoveDuplicates(const aText: string): string;
+class function Utils.RemoveDuplicates(const aText: string): string;
 var
   i, l: integer;
 begin
@@ -1350,18 +1350,18 @@ begin
   end;
 end;
 
-class function  TUtils.HudTextItem(const AKey: string; const AValue: string; const APaddingWidth: Cardinal=20; const ASeperator: string='-'): string;
+class function  Utils.HudTextItem(const AKey: string; const AValue: string; const APaddingWidth: Cardinal=20; const ASeperator: string='-'): string;
 begin
   Result := Format('%s %s %s', [aKey.PadRight(APaddingWidth), aSeperator, aValue]);
 end;
 
-class procedure TUtils.GotoURL(const AURL: string);
+class procedure Utils.GotoURL(const AURL: string);
 begin
   if AURL.IsEmpty then Exit;
   ShellExecute(0, 'OPEN', PChar(AURL), '', '', SW_SHOWNORMAL);
 end;
 
-class function  TUtils.GetComputerName(): string;
+class function  Utils.GetComputerName(): string;
 var
   LLength: dword;
 begin
@@ -1371,7 +1371,7 @@ begin
   Result := PChar(result);
 end;
 
-class function  TUtils.GetLoggedUserName(): string;
+class function  Utils.GetLoggedUserName(): string;
 const
   cnMaxUserNameLen = 254;
 var
@@ -1385,22 +1385,22 @@ begin
   Result := sUserName;
 end;
 
-class function  TUtils.GetOSVersion(): string;
+class function  Utils.GetOSVersion(): string;
 begin
   Result := TOSVersion.ToString;
 end;
 
-class function  TUtils.GetNow(): string;
+class function  Utils.GetNow(): string;
 begin
   Result := DateTimeToStr(Now());
 end;
 
-class procedure TUtils.GetDiskFreeSpace(const APath: string; var AFreeSpace: Int64; var ATotalSpace: Int64);
+class procedure Utils.GetDiskFreeSpace(const APath: string; var AFreeSpace: Int64; var ATotalSpace: Int64);
 begin
   GetDiskFreeSpaceEx(PChar(aPath), aFreeSpace, aTotalSpace, nil);
 end;
 
-class procedure TUtils.GetMemoryFree(var AAvailMem: UInt64; var ATotalMem: UInt64);
+class procedure Utils.GetMemoryFree(var AAvailMem: UInt64; var ATotalMem: UInt64);
 var
   LMemStatus: MemoryStatusEx;
 begin
@@ -1411,7 +1411,7 @@ begin
  aTotalMem := LMemStatus.ullTotalPhys;
 end;
 
-class function  TUtils.GetVideoCardName(): string;
+class function  Utils.GetVideoCardName(): string;
 const
   WbemUser = '';
   WbemPassword = '';
@@ -1442,22 +1442,22 @@ begin;
   end;
 end;
 
-class function  TUtils.GetAppName(): string;
+class function  Utils.GetAppName(): string;
 begin
   Result := Format('%s %s',[TPath.GetFileNameWithoutExtension(ParamStr(0)),GetAppVersionFullStr]);
 end;
 
-class function  TUtils.GetAppPath(): string;
+class function  Utils.GetAppPath(): string;
 begin
   Result := ExtractFilePath(ParamStr(0));
 end;
 
-class function  TUtils.GetCPUCount(): Integer;
+class function  Utils.GetCPUCount(): Integer;
 begin
   Result := CPUCount;
 end;
 
-class function  TUtils.GetAppVersionStr(): string;
+class function  Utils.GetAppVersionStr(): string;
 var
   LRec: LongRec;
   LVer : Cardinal;
@@ -1471,17 +1471,17 @@ begin
   else Result := '';
 end;
 
-class function  TUtils.GetAppVersionFullStr(): string;
+class function  Utils.GetAppVersionFullStr(): string;
 begin
   GetModuleVersionFullStr(ParamStr(0));
 end;
 
-class function  TUtils.GetModuleVersionFullStr(): string;
+class function  Utils.GetModuleVersionFullStr(): string;
 begin
   Result := GetModuleVersionFullStr(GetModuleName(HInstance));
 end;
 
-class function  TUtils.GetModuleVersionFullStr(AFilename: string): string;
+class function  Utils.GetModuleVersionFullStr(AFilename: string): string;
 var
   LExe: string;
   LSize, LHandle: DWORD;
@@ -1526,7 +1526,7 @@ begin
   end;
 end;
 
-class function  TUtils.HttpGet(const aURL: string; const aStatus: PString=nil): string;
+class function  Utils.HttpGet(const aURL: string; const aStatus: PString=nil): string;
 var
   LHttp: THTTPClient;
   LResponse: IHTTPResponse;
@@ -1542,7 +1542,7 @@ begin
   end;
 end;
 
-class function  TUtils.RemoveQuotes(const AText: string): string;
+class function  Utils.RemoveQuotes(const AText: string): string;
 var
   S: string;
 begin
@@ -1550,8 +1550,8 @@ begin
   Result := AnsiDequotedStr(S, '''');
 end;
 
-{ TConsole }
-class constructor TConsole.Create();
+{ Console }
+class constructor Console.Create();
 begin
   // save current console codepage
   FInputCodePage := GetConsoleCP();
@@ -1566,20 +1566,20 @@ begin
   ClearKeyboardBuffer();
 end;
 
-class destructor TConsole.Destroy();
+class destructor Console.Destroy();
 begin
   // restore code page
   SetConsoleCP(FInputCodePage);
   SetConsoleOutputCP(FOutputCodePage);
 end;
 
-class procedure TConsole.Clear();
+class procedure Console.Clear();
 begin
   // Clear the console screen
   Win32Check(ClearScreen(GetStdHandle(STD_OUTPUT_HANDLE)));
 end;
 
-class function  TConsole.ClearScreen(const AConsole: THandle): Boolean;
+class function  Console.ClearScreen(const AConsole: THandle): Boolean;
 var
   csbi: TConsoleScreenBufferInfo;
   ConsoleSize: DWORD;
@@ -1599,7 +1599,7 @@ begin
   end;
 end;
 
-class procedure TConsole.SetTextColor(AColor: Word);
+class procedure Console.SetTextColor(AColor: Word);
 var
   LConsoleHandle: THandle;
 begin
@@ -1607,7 +1607,7 @@ begin
   SetConsoleTextAttribute(LConsoleHandle, AColor);
 end;
 
-class procedure TConsole.ClearLine(AColor: Word);
+class procedure Console.ClearLine(AColor: Word);
 var
   LConsoleOutput: THandle;
   LConsoleInfo: TConsoleScreenBufferInfo;
@@ -1628,7 +1628,7 @@ begin
   end;
 end;
 
-class procedure TConsole.ClearLineFromCursor(AColor: Word);
+class procedure Console.ClearLineFromCursor(AColor: Word);
 var
   LConsoleOutput: THandle;
   LConsoleInfo: TConsoleScreenBufferInfo;
@@ -1649,7 +1649,7 @@ begin
   end;
 end;
 
-class function  TConsole.GetWidth(): Integer;
+class function  Console.GetWidth(): Integer;
 var
   LConsoleInfo: TConsoleScreenBufferInfo;
 begin
@@ -1657,12 +1657,12 @@ begin
   Result := LConsoleInfo.dwSize.X;
 end;
 
-class procedure TConsole.SetTitle(const ATitle: string);
+class procedure Console.SetTitle(const ATitle: string);
 begin
   WinApi.Windows.SetConsoleTitle(PChar(ATitle));
 end;
 
-class function  TConsole.HasOutput(): Boolean;
+class function  Console.HasOutput(): Boolean;
 var
   LStdOut: THandle;
   LMode: DWORD;
@@ -1671,7 +1671,7 @@ begin
   Result := (LStdOut <> INVALID_HANDLE_VALUE) and GetConsoleMode(LStdOut, LMode);
 end;
 
-class function  TConsole.WasRunFrom(): Boolean;
+class function  Console.WasRunFrom(): Boolean;
 var
   LStartInfo: TStartupInfo;
 begin
@@ -1680,12 +1680,12 @@ begin
   Result := ((LStartInfo.dwFlags and STARTF_USESHOWWINDOW) = 0);
 end;
 
-class function  TConsole.IsStartedFromDelphiIDE(): Boolean;
+class function  Console.IsStartedFromDelphiIDE(): Boolean;
 begin
   Result := (GetEnvironmentVariable('BDS') <> '');
 end;
 
-class procedure TConsole.WaitForAnyKey();
+class procedure Console.WaitForAnyKey();
 var
   LInputRec: TInputRecord;
   LNumRead: Cardinal;
@@ -1702,7 +1702,7 @@ begin
   SetConsoleMode(LStdIn, LOldMode);
 end;
 
-class function  TConsole.AnyKeyPressed(): Boolean;
+class function  Console.AnyKeyPressed(): Boolean;
 var
   LNumberOfEvents     : DWORD;
   LBuffer             : TInputRecord;
@@ -1731,18 +1731,18 @@ begin
   end;
 end;
 
-class procedure TConsole.ClearKeyStates();
+class procedure Console.ClearKeyStates();
 begin
   FillChar(FKeyState, SizeOf(FKeyState), 0);
   ClearKeyboardBuffer;
 end;
 
-class function  TConsole.IsKeyPressed(AKey: Byte): Boolean;
+class function  Console.IsKeyPressed(AKey: Byte): Boolean;
 begin
   Result := (GetAsyncKeyState(AKey) and $8000) <> 0;
 end;
 
-class function  TConsole.WasKeyReleased(AKey: Byte): Boolean;
+class function  Console.WasKeyReleased(AKey: Byte): Boolean;
 begin
   Result := False;
   if IsKeyPressed(AKey) and (not FKeyState[1, AKey]) then
@@ -1757,7 +1757,7 @@ begin
   end;
 end;
 
-class function  TConsole.WasKeyPressed(AKey: Byte): Boolean;
+class function  Console.WasKeyPressed(AKey: Byte): Boolean;
 begin
   Result := False;
   if IsKeyPressed(AKey) and (not FKeyState[1, AKey]) then
@@ -1772,7 +1772,7 @@ begin
   end;
 end;
 
-class procedure TConsole.Pause(aColor: DWORD; const aMsg: string; const AForcePause: Boolean);
+class procedure Console.Pause(aColor: DWORD; const aMsg: string; const AForcePause: Boolean);
 var
   LDoPause: Boolean;
 begin
@@ -1799,7 +1799,7 @@ begin
   PrintLn();
 end;
 
-class procedure TConsole.ClearKeyboardBuffer();
+class procedure Console.ClearKeyboardBuffer();
 var
   LInputRecord: TInputRecord;
   LEventsRead: DWORD;
@@ -1810,7 +1810,7 @@ begin
   end;
 end;
 
-class function  TConsole.ReadKey(): Char;
+class function  Console.ReadKey(): Char;
 var
   LInputRecord: TInputRecord;
   LEventsRead: DWORD;
@@ -1821,7 +1821,7 @@ begin
   Result := LInputRecord.Event.KeyEvent.UnicodeChar;
 end;
 
-class function  TConsole.ReadLnX(const AAllowedChars: TSysCharSet; AMaxLength: Integer): string;
+class function  Console.ReadLnX(const AAllowedChars: TSysCharSet; AMaxLength: Integer): string;
 var
   LInputChar: Char;
 begin
@@ -1851,7 +1851,7 @@ begin
   PrintLn();
 end;
 
-class function  TConsole.WrapTextEx(const ALine: string; AMaxCol: Integer; const ABreakChars: TSysCharSet=[' ', '-', ',', ':', #9]): string;
+class function  Console.WrapTextEx(const ALine: string; AMaxCol: Integer; const ABreakChars: TSysCharSet=[' ', '-', ',', ':', #9]): string;
 var
   LText: string;
   LPos: integer;
@@ -1898,7 +1898,7 @@ begin
   Result := LText;
 end;
 
-class procedure TConsole.Print(const AMsg: string; const AArgs: array of const; const AColor: DWORD);
+class procedure Console.Print(const AMsg: string; const AArgs: array of const; const AColor: DWORD);
 begin
   if not HasOutput then Exit;
   SetTextColor(Ord(AColor));
@@ -1906,12 +1906,12 @@ begin
   SetTextColor(WHITE);
 end;
 
-class procedure TConsole.Print(const AMsg: string; const AColor: DWORD);
+class procedure Console.Print(const AMsg: string; const AColor: DWORD);
 begin
   Print(AMsg, [], AColor);
 end;
 
-class procedure TConsole.PrintLn(const AMsg: string; const AArgs: array of const; const AColor: DWORD);
+class procedure Console.PrintLn(const AMsg: string; const AArgs: array of const; const AColor: DWORD);
 begin
   if not HasOutput then Exit;
   SetTextColor(Ord(AColor));
@@ -1919,22 +1919,22 @@ begin
   SetTextColor(WHITE);
 end;
 
-class procedure TConsole.PrintLn(const AMsg: string; const AColor: DWORD);
+class procedure Console.PrintLn(const AMsg: string; const AColor: DWORD);
 begin
   PrintLn(AMsg, [], AColor);
 end;
 
-class procedure TConsole.PrintLn();
+class procedure Console.PrintLn();
 begin
   PrintLn('');
 end;
 
-class procedure TConsole.Print();
+class procedure Console.Print();
 begin
   Print('');
 end;
 
-class procedure TConsole.Teletype(const AText: string; const AColor: DWORD; const AMargin: Integer; const AMinDelay: Integer; const AMaxDelay: Integer; const ABreakKey: Byte);
+class procedure Console.Teletype(const AText: string; const AColor: DWORD; const AMargin: Integer; const AMinDelay: Integer; const AMaxDelay: Integer; const ABreakKey: Byte);
 const
   {$J+}
   LDelay: Integer = 0;
@@ -1951,7 +1951,7 @@ begin
   for LChar in LText do
   begin
     Print(LChar, [], AColor);
-    if not TMath.RandomBool then
+    if not Math.RandomBool then
       LDelay := RandomRange(AMinDelay, AMaxDelay);
     Sleep(LDelay);
     if IsKeyPressed(ABreakKey) then
@@ -1962,13 +1962,17 @@ begin
   end;
 end;
 
-
-class operator TFrameLimitTimer.Initialize (out ADest: TFrameLimitTimer);
+{ FrameLimitTimer }
+class constructor FrameLimitTimer.Create();
 begin
   Init();
 end;
 
-class  procedure TFrameLimitTimer.Init(const ATargetFrameRate: Cardinal);
+class destructor FrameLimitTimer.Destroy();
+begin
+end;
+
+class  procedure FrameLimitTimer.Init(const ATargetFrameRate: Cardinal);
 begin
   FLastTime := glfwGetTime();
   FLastFPSTime := FLastTime;
@@ -1979,17 +1983,17 @@ begin
   FEndtime := 0;
 end;
 
-class function  TFrameLimitTimer.TargetFrameRate(): Cardinal;
+class function  FrameLimitTimer.TargetFrameRate(): Cardinal;
 begin
   Result := FTargetFrameRate;
 end;
 
-class function  TFrameLimitTimer.TargetTime(): Double;
+class function  FrameLimitTimer.TargetTime(): Double;
 begin
   Result := FTargetTime;
 end;
 
-class procedure TFrameLimitTimer.Reset();
+class procedure FrameLimitTimer.Reset();
 begin
   FLastTime := glfwGetTime();
   FLastFPSTime := FLastTime;
@@ -1999,13 +2003,13 @@ begin
   FEndtime := 0;
 end;
 
-class procedure TFrameLimitTimer.Start();
+class procedure FrameLimitTimer.Start();
 begin
   FCurrentTime := glfwGetTime();
   FElapsedTime := FCurrentTime - FLastTime;
 end;
 
-class procedure TFrameLimitTimer.Stop();
+class procedure FrameLimitTimer.Stop();
 begin
   Inc(FFrameCount);
   if (FCurrentTime - FLastFPSTime >= 1.0) then
@@ -2027,7 +2031,7 @@ begin
     end;
 end;
 
-class function  TFrameLimitTimer.FrameRate(): Cardinal;
+class function  FrameLimitTimer.FrameRate(): Cardinal;
 begin
   Result := FFramerate;
 end;
@@ -2241,7 +2245,7 @@ begin
 
   LXOY := LR.X / LR.Y;
 
-  Result := ArcTan(LXOY) * TMath.RADTODEG;
+  Result := ArcTan(LXOY) * Math.RADTODEG;
   if LR.Y < 0 then
     Result := Result + 180.0;
 end;
@@ -2251,10 +2255,10 @@ var
   LA: Single;
 begin
   LA := AAngle + 90.0;
-  TMath.ClipValuef(LA, 0, 360, True);
+  Math.ClipValuef(LA, 0, 360, True);
 
-  X := X + TMath.AngleCos(Round(LA)) * -(aSpeed);
-  Y := Y + TMath.AngleSin(Round(LA)) * -(aSpeed);
+  X := X + Math.AngleCos(Round(LA)) * -(aSpeed);
+  Y := Y + Math.AngleSin(Round(LA)) * -(aSpeed);
 end;
 
 function TVector.MagnitudeSquared(): Single;
@@ -2337,7 +2341,7 @@ begin
 end;
 
 { TMath }
-class constructor TMath.Create();
+class constructor Math.Create();
 var
   I: Integer;
 begin
@@ -2352,29 +2356,29 @@ begin
   end;
 end;
 
-class destructor TMath.Destroy();
+class destructor Math.Destroy();
 begin
 end;
 
-class function  TMath.Point(const X, Y: Single): TPoint;
-begin
-  Result.X := X;
-  Result.Y := Y;
-end;
-
-class function  TMath.Vector(const X, Y: Single): TVector;
+class function  Math.Point(const X, Y: Single): TPoint;
 begin
   Result.X := X;
   Result.Y := Y;
 end;
 
-class function  TMath.Size(const AWidth, AHeight: Single): TSize;
+class function  Math.Vector(const X, Y: Single): TVector;
+begin
+  Result.X := X;
+  Result.Y := Y;
+end;
+
+class function  Math.Size(const AWidth, AHeight: Single): TSize;
 begin
   Result.Width := AWidth;
   Result.Height := AHeight;
 end;
 
-class function  TMath.Rect(const X, Y, AWidth, AHeight: Single): TRect;
+class function  Math.Rect(const X, Y, AWidth, AHeight: Single): TRect;
 begin
   Result.X := X;
   Result.Y := Y;
@@ -2382,7 +2386,7 @@ begin
   Result.Height := AHeight;
 end;
 
-class function  TMath.Extent(const AMinX, AMinY, AMaxX, AMaxY: Single): TExtent;
+class function  Math.Extent(const AMinX, AMinY, AMaxX, AMaxY: Single): TExtent;
 begin
   Result.MinX := AMinX;
   Result.MinY := AMinY;
@@ -2390,7 +2394,7 @@ begin
   Result.MaxY := AMaxY;
 end;
 
-class function  TMath.AngleCos(const AAngle: Cardinal): Single;
+class function  Math.AngleCos(const AAngle: Cardinal): Single;
 var
   LAngle: Cardinal;
 begin
@@ -2398,7 +2402,7 @@ begin
   Result := FCosTable[LAngle];
 end;
 
-class function  TMath.AngleSin(const AAngle: Cardinal): Single;
+class function  Math.AngleSin(const AAngle: Cardinal): Single;
 var
   LAngle: Cardinal;
 begin
@@ -2420,12 +2424,12 @@ begin
     Result := Random(LTo - LFrom) + AFrom;
 end;
 
-class function  TMath.RandomRange(const AMin, AMax: Integer): Integer;
+class function  Math.RandomRange(const AMin, AMax: Integer): Integer;
 begin
   Result := _RandomRange(AMin, AMax + 1);
 end;
 
-class function  TMath.RandomRangef(const AMin, AMax: Single): Single;
+class function  Math.RandomRangef(const AMin, AMax: Single): Single;
 var
   LNum: Single;
 begin
@@ -2433,22 +2437,22 @@ begin
   Result := AMin + (LNum * (AMax - AMin));
 end;
 
-class function  TMath.RandomBool(): Boolean;
+class function  Math.RandomBool(): Boolean;
 begin
   Result := Boolean(_RandomRange(0, 2) = 1);
 end;
 
-class function  TMath.GetRandomSeed(): Integer;
+class function  Math.GetRandomSeed(): Integer;
 begin
   Result := System.RandSeed;
 end;
 
-class procedure TMath.SetRandomSeed(const AVaLue: Integer);
+class procedure Math.SetRandomSeed(const AVaLue: Integer);
 begin
   System.RandSeed := AVaLue;
 end;
 
-class function  TMath.ClipVaLuef(var AVaLue: Single; const AMin, AMax: Single; const AWrap: Boolean): Single;
+class function  Math.ClipVaLuef(var AVaLue: Single; const AMin, AMax: Single; const AWrap: Boolean): Single;
 begin
   if AWrap then
     begin
@@ -2476,7 +2480,7 @@ begin
   Result := AVaLue;
 end;
 
-class function  TMath.ClipVaLue(var AVaLue: Integer; const aMin, AMax: Integer; const AWrap: Boolean): Integer;
+class function  Math.ClipVaLue(var AVaLue: Integer; const aMin, AMax: Integer; const AWrap: Boolean): Integer;
 begin
   if AWrap then
     begin
@@ -2504,7 +2508,7 @@ begin
   Result := AVaLue;
 end;
 
-class function  TMath.SameSign(const AVaLue1, AVaLue2: Integer): Boolean;
+class function  Math.SameSign(const AVaLue1, AVaLue2: Integer): Boolean;
 begin
   if Sign(AVaLue1) = Sign(AVaLue2) then
     Result := True
@@ -2512,7 +2516,7 @@ begin
     Result := False;
 end;
 
-class function  TMath.SameSignf(const AVaLue1, AVaLue2: Single): Boolean;
+class function  Math.SameSignf(const AVaLue1, AVaLue2: Single): Boolean;
 begin
   if System.Math.Sign(AVaLue1) = System.Math.Sign(AVaLue2) then
     Result := True
@@ -2520,17 +2524,17 @@ begin
     Result := False;
 end;
 
-class function  TMath.SameValue(const AA, AB: Double; const AEpsilon: Double = 0): Boolean;
+class function  Math.SameValue(const AA, AB: Double; const AEpsilon: Double = 0): Boolean;
 begin
   Result := System.Math.SameVaLue(AA, AB, AEpsilon);
 end;
 
-class function  TMath.SameVaLuef(const AA, AB: Single; const AEpsilon: Single = 0): Boolean;
+class function  Math.SameVaLuef(const AA, AB: Single; const AEpsilon: Single = 0): Boolean;
 begin
   Result := System.Math.SameVaLue(AA, AB, AEpsilon);
 end;
 
-class function  TMath.AngleDiff(const ASrcAngle, ADestAngle: Single): Single;
+class function  Math.AngleDiff(const ASrcAngle, ADestAngle: Single): Single;
 var
   C: Single;
 begin
@@ -2543,7 +2547,7 @@ begin
   Result := C;
 end;
 
-class procedure TMath.AngleRotatePos(const AAngle: Single; var AX, AY: Single);
+class procedure Math.AngleRotatePos(const AAngle: Single; var AX, AY: Single);
 var
   nx,ny: Single;
   ia: Integer;
@@ -2560,7 +2564,7 @@ begin
   AY := ny;
 end;
 
-class procedure TMath.SmoothMove(var AVaLue: Single; const AAmount, AMax, ADrag: Single);
+class procedure Math.SmoothMove(var AVaLue: Single; const AAmount, AMax, ADrag: Single);
 var
   LAmt: Single;
 begin
@@ -2592,7 +2596,7 @@ begin
   end;
 end;
 
-class function  TMath.Lerp(const AFrom, ATo, ATime: Double): Double;
+class function  Math.Lerp(const AFrom, ATo, ATime: Double): Double;
 begin
   if ATime <= 0.5 then
     Result := AFrom + (ATo - AFrom) * ATime
@@ -2600,7 +2604,7 @@ begin
     Result := ATo - (ATo - AFrom) * (1.0 - ATime);
 end;
 
-class function  TMath.PointInRectangle(APoint: TVector; ARect: TRect): Boolean;
+class function  Math.PointInRectangle(APoint: TVector; ARect: TRect): Boolean;
 begin
   if ((APoint.x >= ARect.x) and (APoint.x <= (ARect.x + ARect.width)) and
     (APoint.y >= ARect.y) and (APoint.y <= (ARect.y + ARect.height))) then
@@ -2609,12 +2613,12 @@ begin
     Result := False;
 end;
 
-class function  TMath.PointInCircle(APoint, ACenter: TVector; ARadius: Single): Boolean;
+class function  Math.PointInCircle(APoint, ACenter: TVector; ARadius: Single): Boolean;
 begin
   Result := CirclesOverlap(APoint, 0, ACenter, ARadius);
 end;
 
-class function  TMath.PointInTriangle(APoint, AP1, AP2, AP3: TVector): Boolean;
+class function  Math.PointInTriangle(APoint, AP1, AP2, AP3: TVector): Boolean;
 var
   LAlpha, LBeta, LGamma: Single;
 begin
@@ -2634,7 +2638,7 @@ begin
     Result := False;
 end;
 
-class function  TMath.CirclesOverlap(ACenter1: TVector; ARadius1: Single; ACenter2: TVector; ARadius2: Single): Boolean;
+class function  Math.CirclesOverlap(ACenter1: TVector; ARadius1: Single; ACenter2: TVector; ARadius2: Single): Boolean;
 var
   LDX, LDY, LDistance: Single;
 begin
@@ -2649,7 +2653,7 @@ begin
     Result := False;
 end;
 
-class function  TMath.CircleInRectangle(ACenter: TVector; ARadius: Single; ARect: TRect): Boolean;
+class function  Math.CircleInRectangle(ACenter: TVector; ARadius: Single; ARect: TRect): Boolean;
 var
   LDX, LDY: Single;
   LCornerDistanceSq: Single;
@@ -2691,7 +2695,7 @@ begin
   Result := Boolean(LCornerDistanceSq <= (ARadius * ARadius));
 end;
 
-class function  TMath.RectanglesOverlap(ARect1: TRect; ARect2: TRect): Boolean;
+class function  Math.RectanglesOverlap(ARect1: TRect; ARect2: TRect): Boolean;
 var
   LDX, LDY: Single;
 begin
@@ -2705,7 +2709,7 @@ begin
     Result := False;
 end;
 
-class function  TMath.RectangleIntersection(ARect1, ARect2: TRect): TRect;
+class function  Math.RectangleIntersection(ARect1, ARect2: TRect): TRect;
 var
   LDXX, LDYY: Single;
 begin
@@ -2775,7 +2779,7 @@ begin
   end;
 end;
 
-class function  TMath.LineIntersection(AX1, AY1, AX2, AY2, AX3, AY3, AX4, AY4: Integer; var AX: Integer; var AY: Integer): TLineIntersection;
+class function  Math.LineIntersection(AX1, AY1, AX2, AY2, AX3, AY3, AX4, AY4: Integer; var AX: Integer; var AY: Integer): TLineIntersection;
 var
   LAX, LBX, LCX, LAY, LBY, LCY, LD, LE, LF, LNum: Integer;
   LOffset: Integer;
@@ -2890,7 +2894,7 @@ begin
   Result := liTrue;
 end;
 
-class function  TMath.RadiusOverlap(ARadius1, AX1, AY1, ARadius2, AX2, AY2, AShrinkFactor: Single): Boolean;
+class function  Math.RadiusOverlap(ARadius1, AX1, AY1, ARadius2, AX2, AY2, AShrinkFactor: Single): Boolean;
 var
   LDist: Single;
   LR1, LR2: Single;
@@ -2912,7 +2916,7 @@ begin
     Result := False;
 end;
 
-class function  TMath.EaseValue(ACurrentTime: Double; AStartValue: Double; AChangeInValue: Double; ADuration: Double; AEaseType: TEaseType): Double;
+class function  Math.EaseValue(ACurrentTime: Double; AStartValue: Double; AChangeInValue: Double; ADuration: Double; AEaseType: TEaseType): Double;
 begin
   Result := 0;
   case AEaseType of
@@ -3080,7 +3084,7 @@ begin
   end;
 end;
 
-class function  TMath.EasePosition(AStartPos: Double; AEndPos: Double; ACurrentPos: Double; AEaseType: TEaseType): Double;
+class function  Math.EasePosition(AStartPos: Double; AEndPos: Double; ACurrentPos: Double; AEaseType: TEaseType): Double;
 var
   LT, LB, LC, LD: Double;
 begin
@@ -3093,7 +3097,7 @@ begin
     Result := 100;
 end;
 
-class function  TMath.OBBIntersect(const AObbA, AObbB: TlgOBB): Boolean;
+class function  Math.OBBIntersect(const AObbA, AObbB: TlgOBB): Boolean;
 var
   LAxes: array[0..3] of TPoint;
   I: Integer;
@@ -3110,8 +3114,8 @@ var
     LAngle: Cardinal;
   begin
     LAngle := Abs(Round(AAngle));
-    s := TMath.AngleSin(LAngle);
-    c := TMath.AngleCos(LAngle);
+    s := Math.AngleSin(LAngle);
+    c := Math.AngleCos(LAngle);
     Result.x := V.x * c - V.y * s;
     Result.y := V.x * s + V.y * c;
   end;
@@ -3122,17 +3126,17 @@ var
     I: Integer;
     LDot: Single;
   begin
-    LCorners[0] := Rotate(TMath.Point(AObb.Extents.x, AObb.Extents.y), AObb.Rotation);
-    LCorners[1] := Rotate(TMath.Point(-AObb.Extents.x, AObb.Extents.y), AObb.Rotation);
-    LCorners[2] := Rotate(TMath.Point(AObb.Extents.x, -AObb.Extents.y), AObb.Rotation);
-    LCorners[3] := Rotate(TMath.Point(-AObb.Extents.x, -AObb.Extents.y), AObb.Rotation);
+    LCorners[0] := Rotate(Math.Point(AObb.Extents.x, AObb.Extents.y), AObb.Rotation);
+    LCorners[1] := Rotate(Math.Point(-AObb.Extents.x, AObb.Extents.y), AObb.Rotation);
+    LCorners[2] := Rotate(Math.Point(AObb.Extents.x, -AObb.Extents.y), AObb.Rotation);
+    LCorners[3] := Rotate(Math.Point(-AObb.Extents.x, -AObb.Extents.y), AObb.Rotation);
 
-    Result.x := Dot(AAxis, TMath.Point(AObb.Center.x + LCorners[0].x, AObb.Center.y + LCorners[0].y));
+    Result.x := Dot(AAxis, Math.Point(AObb.Center.x + LCorners[0].x, AObb.Center.y + LCorners[0].y));
     Result.y := Result.x;
 
     for I := 1 to 3 do
     begin
-      LDot := Dot(AAxis, TMath.Point(AObb.Center.x + LCorners[I].x, AObb.Center.y + LCorners[I].y));
+      LDot := Dot(AAxis, Math.Point(AObb.Center.x + LCorners[I].x, AObb.Center.y + LCorners[I].y));
       if LDot < Result.x then Result.x := LDot;
       if LDot > Result.y then Result.y := LDot;
     end;
@@ -3140,10 +3144,10 @@ var
 
 
 begin
-  LAxes[0] := Rotate(TMath.Point(1, 0), AObbA.Rotation);
-  LAxes[1] := Rotate(TMath.Point(0, 1), AObbA.Rotation);
-  LAxes[2] := Rotate(TMath.Point(1, 0), AObbB.Rotation);
-  LAxes[3] := Rotate(TMath.Point(0, 1), AObbB.Rotation);
+  LAxes[0] := Rotate(Math.Point(1, 0), AObbA.Rotation);
+  LAxes[1] := Rotate(Math.Point(0, 1), AObbA.Rotation);
+  LAxes[2] := Rotate(Math.Point(1, 0), AObbB.Rotation);
+  LAxes[3] := Rotate(Math.Point(0, 1), AObbB.Rotation);
 
   for I := 0 to 3 do
   begin
@@ -3155,7 +3159,7 @@ begin
   Result := True;
 end;
 
-class function  TMath.UnitToScalarValue(const AValue, AMaxValue: Double): Double;
+class function  Math.UnitToScalarValue(const AValue, AMaxValue: Double): Double;
 var
   LGain: Double;
   LFactor: Double;
@@ -3193,26 +3197,26 @@ begin
   FFinished := True;
 end;
 
-{ TAsync }
-class operator TAsync.Initialize(out ADest: TAsync);
+{ Async }
+class constructor Async.Create();
 begin
-  ADest.FQueue := TList<TAsyncThread>.Create;
-  ADest.FBusy := TDictionary<string, TBusyData>.Create;
+  FQueue := TList<TAsyncThread>.Create;
+  FBusy := TDictionary<string, TBusyData>.Create;
 end;
 
-class operator TAsync.Finalize(var ADest: TAsync);
+class destructor Async.Destroy();
 begin
-  FreeAndNil(ADest.FBusy);
-  FreeAndNil(ADest.FQueue);
+  FBusy.Free();
+  FQueue.Free();
 end;
 
-class procedure TAsync.Clear();
+class procedure Async.Clear();
 begin
   FBusy.Clear();
   FQueue.Clear();
 end;
 
-class procedure TAsync.Process();
+class procedure Async.Process();
 var
   LAsyncThread: TAsyncThread;
   LAsyncThread2: TAsyncThread;
@@ -3253,7 +3257,7 @@ begin
   Leave();
 end;
 
-class procedure TAsync.Run(const AName: string; const ABackgroundTask: TAsyncProc; const AWaitForgroundTask: TAsyncProc);
+class procedure Async.Run(const AName: string; const ABackgroundTask: TAsyncProc; const AWaitForgroundTask: TAsyncProc);
 var
   LAsyncThread: TAsyncThread;
   LBusy: TBusyData;
@@ -3275,7 +3279,7 @@ begin
   Leave;
 end;
 
-class function  TAsync.Busy(const AName: string): Boolean;
+class function  Async.Busy(const AName: string): Boolean;
 var
   LBusy: TBusyData;
 begin
@@ -3287,7 +3291,7 @@ begin
   Result := LBusy.Flag;
 end;
 
-class procedure TAsync.Suspend();
+class procedure Async.Suspend();
 var
   LAsyncThread: TAsyncThread;
 begin
@@ -3298,7 +3302,7 @@ begin
   end;
 end;
 
-class procedure TAsync.Resume();
+class procedure Async.Resume();
 var
   LAsyncThread: TAsyncThread;
 begin
@@ -3309,14 +3313,14 @@ begin
   end;
 end;
 
-class procedure TAsync.Enter();
+class procedure Async.Enter();
 begin
-  TUtils.EnterCriticalSection();
+  Utils.EnterCriticalSection();
 end;
 
-class procedure TAsync.Leave();
+class procedure Async.Leave();
 begin
-  TUtils.LeaveCriticalSection();
+  Utils.LeaveCriticalSection();
 end;
 
 { TVirtualBuffer }
@@ -3478,7 +3482,7 @@ function TRingBuffer<T>.Write(const AData: array of T;
 var
   i, WritePos: Integer;
 begin
-  TUtils.EnterCriticalSection();
+  Utils.EnterCriticalSection();
   try
     for i := 0 to ACount - 1 do
     begin
@@ -3488,7 +3492,7 @@ begin
     FWriteIndex := (FWriteIndex + ACount) mod FCapacity;
     Result := ACount;
   finally
-    TUtils.LeaveCriticalSection();
+    Utils.LeaveCriticalSection();
   end;
 end;
 
@@ -3521,7 +3525,7 @@ var
   I: Integer;
 begin
 
-  TUtils.EnterCriticalSection();
+  Utils.EnterCriticalSection();
   try
     for I := Low(FBuffer) to High(FBuffer) do
     begin
@@ -3531,7 +3535,7 @@ begin
     FReadIndex := 0;
     FWriteIndex := 0;
   finally
-    TUtils.LeaveCriticalSection();
+    Utils.LeaveCriticalSection();
   end;
 end;
 
@@ -3567,7 +3571,7 @@ function TVirtualRingBuffer<T>.Write(const AData: array of T;
 var
   i, WritePos: Integer;
 begin
-  TUtils.EnterCriticalSection();
+  Utils.EnterCriticalSection();
   try
     for i := 0 to ACount - 1 do
     begin
@@ -3578,7 +3582,7 @@ begin
     FWriteIndex := (FWriteIndex + ACount) mod FCapacity;
     Result := ACount;
   finally
-    TUtils.LeaveCriticalSection();
+    Utils.LeaveCriticalSection();
   end;
 end;
 
@@ -3613,7 +3617,7 @@ var
   I: Integer;
 begin
 
-  TUtils.EnterCriticalSection();
+  Utils.EnterCriticalSection();
   try
     for I := 0 to FCapacity-1 do
     begin
@@ -3623,7 +3627,7 @@ begin
     FReadIndex := 0;
     FWriteIndex := 0;
   finally
-    TUtils.LeaveCriticalSection();
+    Utils.LeaveCriticalSection();
   end;
 end;
 
@@ -3913,10 +3917,10 @@ var
     LBytesToRead := UInt64(LOffset) - unztell64(FHandle);
     while LBytesToRead > 0 do
     begin
-      if LBytesToRead > TUtils.GetTempStaticBufferSize() then
-        unzReadCurrentFile(FHandle, TUtils.GetTempStaticBuffer(), TUtils.GetTempStaticBufferSize())
+      if LBytesToRead > Utils.GetTempStaticBufferSize() then
+        unzReadCurrentFile(FHandle, Utils.GetTempStaticBuffer(), Utils.GetTempStaticBufferSize())
       else
-        unzReadCurrentFile(FHandle, TUtils.GetTempStaticBuffer(), LBytesToRead);
+        unzReadCurrentFile(FHandle, Utils.GetTempStaticBuffer(), LBytesToRead);
 
       LBytesToRead := UInt64(LOffset) - unztell64(FHandle);
     end;
@@ -4121,8 +4125,8 @@ end;
 
 procedure TZipFile_BuildProgress(const ASender: Pointer; const AFilename: string; const AProgress: Integer; const ANewFile: Boolean);
 begin
-  if aNewFile then TConsole.PrintLn('');
-  TConsole.Print(TConsole.CR+'Adding %s(%d%s)...', [ExtractFileName(string(aFilename)), aProgress, '%']);
+  if aNewFile then Console.PrintLn('');
+  Console.Print(Console.CR+'Adding %s(%d%s)...', [ExtractFileName(string(aFilename)), aProgress, '%']);
 end;
 
 class function TZipFile.Build(const AZipFilename, ADirectoryName: string; const ASender: Pointer; const AHandler: BuildProgress; const APassword: string): Boolean;
@@ -4150,8 +4154,8 @@ var
   begin
     Result := crc32(0, nil, 0);
     repeat
-      LBytesRead := AStream.Read(TUtils.GetTempStaticBuffer()^, TUtils.GetTempStaticBufferSize());
-      Result := crc32(Result, PBytef(TUtils.GetTempStaticBuffer()), LBytesRead);
+      LBytesRead := AStream.Read(Utils.GetTempStaticBuffer()^, Utils.GetTempStaticBufferSize());
+      Result := crc32(Result, PBytef(Utils.GetTempStaticBuffer()), LBytesRead);
     until LBytesRead = 0;
 
     LBuffer := nil;
@@ -4212,10 +4216,10 @@ begin
         // read through file
         repeat
           // read in a buffer length of file
-          LBytesRead := LFile.Read(TUtils.GetTempStaticBuffer()^, TUtils.GetTempStaticBufferSize());
+          LBytesRead := LFile.Read(Utils.GetTempStaticBuffer()^, Utils.GetTempStaticBufferSize());
 
           // write buffer out to zip file
-          zipWriteInFileInZip(LZipFile, TUtils.GetTempStaticBuffer(), LBytesRead);
+          zipWriteInFileInZip(LZipFile, Utils.GetTempStaticBuffer(), LBytesRead);
 
           // calc file progress percentage
           LProgress := 100.0 * (LFile.Position / LFileSize);
@@ -4355,13 +4359,13 @@ begin
   IO := AIO;
 end;
 
-{ TAudio }
-class function TAudio.FindFreeSoundSlot: Integer;
+{ Audio }
+class function Audio.FindFreeSoundSlot: Integer;
 var
   I: Integer;
 begin
-  Result := AUDIO_ERROR;
-  for I := 0 to AUDIO_SOUND_COUNT-1 do
+  Result := ERROR;
+  for I := 0 to SOUND_COUNT-1 do
   begin
     if not FSound[I].InUse then
     begin
@@ -4371,12 +4375,12 @@ begin
   end;
 end;
 
-class function TAudio.FindFreeChannelSlot: Integer;
+class function Audio.FindFreeChannelSlot: Integer;
 var
   I: Integer;
 begin
-  Result := AUDIO_ERROR;
-  for I := 0 to AUDIO_SOUND_COUNT-1 do
+  Result := ERROR;
+  for I := 0 to SOUND_COUNT-1 do
   begin
     if (not FChannel[I].InUse) and (not FChannel[I].Reserved) then
     begin
@@ -4386,26 +4390,26 @@ begin
   end;
 end;
 
-class function TAudio.ValidChannel(const AChannel: Integer): Boolean;
+class function Audio.ValidChannel(const AChannel: Integer): Boolean;
 begin
   Result := False;
-  if not InRange(AChannel, 0, AUDIO_CHANNEL_COUNT-1) then Exit;
+  if not InRange(AChannel, 0, CHANNEL_COUNT-1) then Exit;
   if not FChannel[AChannel].InUse then Exit;
   Result := True;
 end;
 
-class constructor TAudio.Create;
+class constructor Audio.Create;
 begin
   inherited;
 end;
 
-class destructor TAudio.Destroy;
+class destructor Audio.Destroy;
 begin
   Close;
   inherited;
 end;
 
-class function  TAudio.Open: Boolean;
+class function  Audio.Open: Boolean;
 begin
   Result := False;
   if Opened then Exit;
@@ -4419,7 +4423,7 @@ begin
   Result := Opened;
 end;
 
-class procedure TAudio.Close;
+class procedure Audio.Close;
 begin
   if not Opened then Exit;
   UnloadMusic;
@@ -4428,12 +4432,12 @@ begin
   InitData;
 end;
 
-class function TAudio.Opened: Boolean;
+class function Audio.Opened: Boolean;
 begin
   Result := FOpened;
 end;
 
-class procedure TAudio.InitData;
+class procedure Audio.InitData;
 var
   I: Integer;
 begin
@@ -4449,14 +4453,14 @@ begin
   FPaused := False;
 end;
 
-class procedure TAudio.Update;
+class procedure Audio.Update;
 var
   I: Integer;
 begin
   if not Opened then Exit;
 
   // check channels
-  for I := 0 to AUDIO_CHANNEL_COUNT-1 do
+  for I := 0 to CHANNEL_COUNT-1 do
   begin
     if FChannel[I].InUse then
     begin
@@ -4469,12 +4473,12 @@ begin
   end;
 end;
 
-class function  TAudio.GetPause: Boolean;
+class function  Audio.GetPause: Boolean;
 begin
   Result := FPaused;
 end;
 
-class procedure TAudio.SetPause(const APause: Boolean);
+class procedure Audio.SetPause(const APause: Boolean);
 begin
   if not Opened then Exit;
 
@@ -4493,14 +4497,14 @@ begin
   end;
 end;
 
-class function  TAudio.PlayMusic(const AInputStream: TIO; const AVolume: Single; const ALoop: Boolean; const APan: Single): Boolean;
+class function  Audio.PlayMusic(const AInputStream: TIO; const AVolume: Single; const ALoop: Boolean; const APan: Single): Boolean;
 begin
   Result := FAlse;
   if not Opened then Exit;
   if not Assigned(AInputStream) then Exit;
   UnloadMusic;
   FVFS.IO := AInputStream;
-  if ma_sound_init_from_file(@FEngine, TUtils.AsUtf8(AInputStream.Tag) , MA_SOUND_FLAG_STREAM, nil,
+  if ma_sound_init_from_file(@FEngine, Utils.AsUtf8(AInputStream.Tag) , MA_SOUND_FLAG_STREAM, nil,
     nil, @FMusic.Handle) <> MA_SUCCESS then
   FVFS.IO := nil;
   ma_sound_start(@FMusic);
@@ -4510,7 +4514,7 @@ begin
   SetMusicPan(APan);
 end;
 
-class procedure TAudio.UnloadMusic;
+class procedure Audio.UnloadMusic;
 begin
   if not Opened then Exit;
   if not FMusic.Loaded then Exit;
@@ -4519,109 +4523,109 @@ begin
   FMusic.Loaded := False;
 end;
 
-class function  TAudio.GetMusicLoop: Boolean;
+class function  Audio.GetMusicLoop: Boolean;
 begin
   Result := False;
   if not Opened then Exit;
   Result := Boolean(ma_sound_is_looping(@FMusic.Handle));
 end;
 
-class procedure TAudio.SetMusicLoop(const ALoop: Boolean);
+class procedure Audio.SetMusicLoop(const ALoop: Boolean);
 begin
   if not Opened then Exit;
   ma_sound_set_looping(@FMusic.Handle, Ord(ALoop))
 end;
 
-class function  TAudio.GetMusicVolume: Single;
+class function  Audio.GetMusicVolume: Single;
 begin
   Result := 0;
   if not Opened then Exit;
   Result := FMusic.Volume;
 end;
 
-class procedure TAudio.SetMusicVolume(const AVolume: Single);
+class procedure Audio.SetMusicVolume(const AVolume: Single);
 begin
   if not Opened then Exit;
   FMusic.Volume := AVolume;
-  ma_sound_set_volume(@FMusic.Handle, TMath.UnitToScalarValue(AVolume, 1));
+  ma_sound_set_volume(@FMusic.Handle, Math.UnitToScalarValue(AVolume, 1));
 end;
 
-class function  TAudio.GetMusicPan: Single;
+class function  Audio.GetMusicPan: Single;
 begin
   Result := ma_sound_get_pan(@FMusic.Handle);
 end;
 
-class procedure TAudio.SetMusicPan(const APan: Single);
+class procedure Audio.SetMusicPan(const APan: Single);
 begin
   ma_sound_set_pan(@FMusic.Handle, EnsureRange(APan, -1, 1));
 end;
 
-class function  TAudio.LoadSound(const AInputStream: TIO): Integer;
+class function  Audio.LoadSound(const AInputStream: TIO): Integer;
 var
   LResult: Integer;
 begin
-  Result := AUDIO_ERROR;
+  Result := ERROR;
   if not FOpened then Exit;
   if FPaused then Exit;
   LResult := FindFreeSoundSlot;
-  if LResult = AUDIO_ERROR then Exit;
+  if LResult = ERROR then Exit;
 
   FVFS.IO := AInputStream;
-  if ma_sound_init_from_file(@FEngine, TUtils.AsUtf8(AInputStream.Tag), 0, nil, nil,
+  if ma_sound_init_from_file(@FEngine, Utils.AsUtf8(AInputStream.Tag), 0, nil, nil,
     @FSound[LResult].Handle) <> MA_SUCCESS then Exit;
   FVFS.IO := nil;
   FSound[LResult].InUse := True;
   Result := LResult;
 end;
 
-class procedure TAudio.UnloadSound(var aSound: Integer);
+class procedure Audio.UnloadSound(var aSound: Integer);
 begin
   if not FOpened then Exit;
   if FPaused then Exit;
-  if not InRange(aSound, 0, AUDIO_SOUND_COUNT-1) then Exit;
+  if not InRange(aSound, 0, SOUND_COUNT-1) then Exit;
   ma_sound_uninit(@FSound[aSound].Handle);
   FSound[aSound].InUse := False;
-  aSound := AUDIO_ERROR;
+  aSound := ERROR;
 end;
 
-class procedure TAudio.UnloadAllSounds;
+class procedure Audio.UnloadAllSounds;
 var
   I: Integer;
 begin
   // close all channels
-  for I := 0 to AUDIO_CHANNEL_COUNT-1 do
+  for I := 0 to CHANNEL_COUNT-1 do
   begin
     ma_sound_stop(@FChannel[I].Handle);
     ma_sound_uninit(@FChannel[I].Handle);
   end;
 
   // close all sound buffers
-  for I := 0 to AUDIO_SOUND_COUNT-1 do
+  for I := 0 to SOUND_COUNT-1 do
   begin
     ma_sound_uninit(@FSound[I].Handle);
   end;
 end;
 
-class function  TAudio.PlaySound(const aSound, aChannel: Integer;
+class function  Audio.PlaySound(const aSound, aChannel: Integer;
   const AVolume: Single; const ALoop: Boolean): Integer;
 var
   LResult: Integer;
 begin
-  Result := AUDIO_ERROR;
+  Result := ERROR;
 
   if not FOpened then Exit;
   if FPaused then Exit;
-  if not InRange(aSound, 0, AUDIO_SOUND_COUNT-1) then Exit;
+  if not InRange(aSound, 0, SOUND_COUNT-1) then Exit;
 
-  if aChannel = AUDIO_CHANNEL_DYNAMIC then
+  if aChannel = CHANNEL_DYNAMIC then
     LResult := FindFreeChannelSlot
   else
     begin
       LResult := aChannel;
-      if not InRange(aChannel, 0, AUDIO_CHANNEL_COUNT-1) then Exit;
+      if not InRange(aChannel, 0, CHANNEL_COUNT-1) then Exit;
       StopChannel(LResult);
     end;
-  if LResult = AUDIO_ERROR then Exit;
+  if LResult = ERROR then Exit;
   if ma_sound_init_copy(@FEngine, @FSound[ASound].Handle, 0, nil,
     @FChannel[LResult].Handle) <> MA_SUCCESS then Exit;
   FChannel[LResult].InUse := True;
@@ -4633,22 +4637,22 @@ begin
   if ma_sound_start(@FChannel[LResult].Handle) <> MA_SUCCESS then
   begin
     StopChannel(LResult);
-    LResult := AUDIO_ERROR;
+    LResult := ERROR;
   end;
 
   Result := LResult;
 end;
 
-class procedure TAudio.ReserveChannel(const aChannel: Integer;
+class procedure Audio.ReserveChannel(const aChannel: Integer;
   const aReserve: Boolean);
 begin
   if not FOpened then Exit;
   if FPaused then Exit;
-  if not InRange(aChannel, 0, AUDIO_CHANNEL_COUNT-1) then Exit;
+  if not InRange(aChannel, 0, CHANNEL_COUNT-1) then Exit;
   FChannel[aChannel].Reserved := aReserve;
 end;
 
-class procedure TAudio.StopChannel(const aChannel: Integer);
+class procedure Audio.StopChannel(const aChannel: Integer);
 begin
   if not FOpened then Exit;
   if FPaused then Exit;
@@ -4658,7 +4662,7 @@ begin
   FChannel[aChannel].InUse := False;
 end;
 
-class procedure TAudio.SetChannelVolume(const aChannel: Integer;
+class procedure Audio.SetChannelVolume(const aChannel: Integer;
   const AVolume: Single);
 var
   LVolume: Single;
@@ -4669,11 +4673,11 @@ begin
   if not ValidChannel(aChannel) then Exit;
 
   FChannel[aChannel].Volume := aVolume;
-  LVolume := TMath.UnitToScalarValue(aVolume, 1);
+  LVolume := Math.UnitToScalarValue(aVolume, 1);
   ma_sound_set_volume(@FChannel[aChannel].Handle, LVolume);
 end;
 
-class function  TAudio.GetChannelVolume(const aChannel: Integer): Single;
+class function  Audio.GetChannelVolume(const aChannel: Integer): Single;
 begin
 Result := 0;
   if not FOpened then Exit;
@@ -4682,7 +4686,7 @@ Result := 0;
   Result := FChannel[aChannel].Volume;
 end;
 
-class procedure TAudio.SetChannelPosition(const aChannel: Integer; const aX,
+class procedure Audio.SetChannelPosition(const aChannel: Integer; const aX,
   aY: Single);
 begin
   if not FOpened then Exit;
@@ -4692,7 +4696,7 @@ begin
   ma_sound_set_position(@FChannel[aChannel].Handle, aX, 0, aY);
 end;
 
-class procedure TAudio.SetChannelLoop(const aChannel: Integer;
+class procedure Audio.SetChannelLoop(const aChannel: Integer;
   const ALoop: Boolean);
 begin
   if not FOpened then Exit;
@@ -4702,7 +4706,7 @@ begin
   ma_sound_set_looping(@FChannel[aChannel].Handle, Ord(aLoop));
 end;
 
-class function  TAudio.GetchannelLoop(const aChannel: Integer): Boolean;
+class function  Audio.GetchannelLoop(const aChannel: Integer): Boolean;
 begin
   Result := False;
   if not FOpened then Exit;
@@ -4712,7 +4716,7 @@ begin
   Result := Boolean(ma_sound_is_looping(@FChannel[aChannel].Handle));
 end;
 
-class function  TAudio.GetChannelPlaying(const aChannel: Integer): Boolean;
+class function  Audio.GetChannelPlaying(const aChannel: Integer): Boolean;
 begin
   Result := False;
   if not FOpened then Exit;
@@ -4813,12 +4817,12 @@ begin
 
   glfwWindowHint(GLFW_SAMPLES, 4);
 
-  FHandle := glfwCreateWindow(AWidth, AHeight, TUtils.AsUtf8(ATitle), nil, nil);
+  FHandle := glfwCreateWindow(AWidth, AHeight, Utils.AsUtf8(ATitle), nil, nil);
   if not Assigned(FHandle) then Exit;
   glfwSetWindowUserPointer(FHandle, Self);
   glfwSetWindowSizeCallback(FHandle, TlgWindow_OnSize);
   glfwSetWindowContentScaleCallback(FHandle,TlgWindow_OnContentScale);
-  TUtils.SetDefaultIcon(FHandle);
+  Utils.SetDefaultIcon(FHandle);
   VideoMode := glfwGetVideoMode(glfwGetPrimaryMonitor);
   glfwGetWindowSize(FHandle, @LWidth, @LHeight);
   glfwSetWindowPos(FHandle, (VideoMode.width - LWidth) div 2, (VideoMode.height - LHeight) div 2);
@@ -4865,7 +4869,7 @@ begin
 
   Self.ClearInput();
 
-  TFrameLimitTimer.Reset();
+  FrameLimitTimer.Reset();
 
   Result := True;
 end;
@@ -4886,9 +4890,9 @@ begin
     glfwDestroyWindow(FHandle);
     FHandle := nil;
   end;
-  FSize := TMath.Size(0, 0);
-  FScaledSize := TMath.Size(0, 0);
-  FScale := TMath.Point(0,0);
+  FSize := Math.Size(0, 0);
+  FScaledSize := Math.Size(0, 0);
+  FScale := Math.Point(0,0);
 end;
 
 function  TWindow.Ready(): Boolean;
@@ -5006,13 +5010,13 @@ end;
 
 procedure TWindow.StartFrame();
 begin
-  TFrameLimitTimer.Start();
-  TAsync.Process();
+  FrameLimitTimer.Start();
+  Async.Process();
 end;
 
 procedure TWindow.EndFrame();
 begin
-  TFrameLimitTimer.Stop();
+  FrameLimitTimer.Stop();
 end;
 
 procedure TWindow.StartDrawing();
@@ -5123,7 +5127,7 @@ begin
     LY := Y{ + ARadius};
     for I := 0 to 360 do
     begin
-      glVertex2f(LX + ARadius * TMath.AngleCos(I), LY - ARadius * TMath.AngleSin(I));
+      glVertex2f(LX + ARadius * Math.AngleCos(I), LY - ARadius * Math.AngleSin(I));
     end;
   glEnd();
 end;
@@ -5142,7 +5146,7 @@ begin
     glVertex2f(LX, LY);
     for i := 0 to 360 do
     begin
-      glVertex2f(LX + ARadius * TMath.AngleCos(i), LY + ARadius * TMath.AngleSin(i));
+      glVertex2f(LX + ARadius * Math.AngleCos(i), LY + ARadius * Math.AngleSin(i));
     end;
   glEnd;
 end;
@@ -5439,7 +5443,7 @@ begin
       end;
     end;
 
-    Result := Boolean(stbi_write_png(TUtils.AsUtf8(LFileName), LWidth, LHeight, 3, LBuffer.Memory, LWidth * 3));
+    Result := Boolean(stbi_write_png(Utils.AsUtf8(LFileName), LWidth, LHeight, 3, LBuffer.Memory, LWidth * 3));
   finally
     LBuffer.Free();
   end;
@@ -5678,6 +5682,83 @@ begin
   Result := True;
 end;
 
+function   TTexture.LoadSVG(const AIO: TIO; const AUnits: string; const ADPI: Single; const AColorKey: PColor): Boolean;
+var
+  LSVG: array of AnsiChar;
+  LSize: Int64;
+  LSVGImage: PNSVGimage;
+  LSVGRast: PNSVGrasterizer;
+  LRGBAData: PByte;
+  W,H: Integer;
+begin
+  Result := False;
+  if FHandle > 0 then Exit;
+  if not Assigned(AIO) then Exit;
+
+  LSize := AIO.Size();
+  SetLength(LSVG, LSize+1);
+  if Length(LSVG) = 0 then Exit;
+
+  AIO.Read(@LSVG[0], LSize);
+  LSVG[LSize] := #0;
+
+  LSVGImage := nsvgParse(@LSVG[0], Utils.AsUTF8(AUnits), ADPI);
+  if not Assigned(LSVGImage) then Exit;
+  LSVG := nil;
+
+  LSVGRast := nsvgCreateRasterizer();
+  if not Assigned(LSVGRast) then Exit;
+
+  W := Round(LSVGImage.width);
+  H := Round(LSVGImage.height);
+  LRGBAData := AllocMem(W * H * 4);
+  if not Assigned(LRGBAData) then
+  begin
+    nsvgDeleteRasterizer(LSVGRast);
+    nsvgDelete(LSVGImage);
+    Exit;
+  end;
+
+  nsvgRasterize(LSVGRast, LSVGImage, 0, 0, 1, LRGBAData, W, H, W*4);
+
+  if Assigned(AColorKey) then
+    ConvertMaskToAlpha(LRGBAData, W, H, AColorKey^);
+
+  glGenTextures(1, @FHandle);
+  glBindTexture(GL_TEXTURE_2D, FHandle);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, W, H, 0, GL_RGBA, GL_UNSIGNED_BYTE, LRGBAData);
+
+  // Set texture parameters
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  FSize.Width := W;
+  FSize.Height := H;
+  FChannels := 4;
+
+  SetBlend(tbAlpha);
+  SetColor(WHITE);
+  SetScale(1.0);
+  SetAngle(0.0);
+  SetHFlip(False);
+  SetVFlip(False);
+  SetPivot(0.5, 0.5);
+  SetAnchor(0.5, 0.5);
+  SetPos(0.0, 0.0);
+  ResetRegion();
+
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  FreeMem(LRGBAData);
+  nsvgDeleteRasterizer(LSVGRast);
+  nsvgDelete(LSVGImage);
+
+  Result := True;
+end;
+
 procedure  TTexture.Unload();
 begin
   if FHandle = 0 then Exit;
@@ -5792,7 +5873,7 @@ end;
 procedure  TTexture.SetAngle(const AAngle: Single);
 begin
   FAngle := AAngle;
-  TMath.ClipValueF(FAngle, 0, 360, True);
+  Math.ClipValueF(FAngle, 0, 360, True);
 end;
 
 function   TTexture.GetHFlip(): Boolean;
@@ -5982,7 +6063,7 @@ begin
   LFilename := TPath.ChangeExtension(AFilename, 'png');
 
   // Use stb_image_write to save the texture to a PNG file
-  Result := Boolean(stbi_write_png(TUtils.AsUtf8(LFilename), Round(FSize.Width), Round(FSize.Height), 4, @LData[0], Round(FSize.Width * 4)));
+  Result := Boolean(stbi_write_png(Utils.AsUtf8(LFilename), Round(FSize.Width), Round(FSize.Height), 4, @LData[0], Round(FSize.Width * 4)));
 
   // Unbind the texture
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -6059,47 +6140,22 @@ begin
     ARed;
 end;
 
-(*
-function   TlgTexture.CollideAABB(const ATexture: TlgTexture): Boolean;
-var
-  boxA, boxB: c2AABB;
-
-  function _c2v(x, y: Single): c2v;
-  begin
-    result.x := x;
-    result.y := y;
-  end;
-
-begin
-  // Set up AABB for this texture
-  boxA.min := _c2V(FPos.X - (FAnchor.X * FRegion.Width * FScale), FPos.Y - (FAnchor.Y * FRegion.Height * FScale));
-  boxA.max := _c2V((FPos.X - (FAnchor.X * FRegion.Width * FScale)) + FRegion.Width * FScale, (FPos.Y - (FAnchor.Y * FRegion.Height * FScale)) + FRegion.Height * FScale);
-
-  // Set up AABB for the other texture
-  boxB.min := _c2V(ATexture.FPos.X - (ATexture.FAnchor.X * ATexture.FRegion.Width * ATexture.FScale), ATexture.FPos.Y - (ATexture.FAnchor.Y * ATexture.FRegion.Height * ATexture.FScale));
-  boxB.max := _c2V((ATexture.FPos.X - (ATexture.FAnchor.X * ATexture.FRegion.Width * ATexture.FScale)) + ATexture.FRegion.Width * ATexture.FScale, (ATexture.FPos.Y - (ATexture.FAnchor.Y * ATexture.FRegion.Height * ATexture.FScale)) + ATexture.FRegion.Height * ATexture.FScale);
-
-  // Check for collision and return result
-  Result := Boolean(c2AABBtoAABB(boxA, boxB));
-end;
-*)
-
 function TTexture.CollideOBB(const ATexture: TTexture): Boolean;
 var
   obbA, obbB: TlgOBB;
 begin
   // Set up OBB for this texture
-  obbA.Center := TMath.Point(FPos.X, FPos.Y);
-  obbA.Extents := TMath.Point(FRegion.Width * FScale / 2, FRegion.Height * FScale / 2);
+  obbA.Center := Math.Point(FPos.X, FPos.Y);
+  obbA.Extents := Math.Point(FRegion.Width * FScale / 2, FRegion.Height * FScale / 2);
   obbA.Rotation := FAngle;
 
   // Set up OBB for the other texture
-  obbB.Center := TMath.Point(ATexture.FPos.X, ATexture.FPos.Y);
-  obbB.Extents := TMath.Point(ATexture.FRegion.Width * ATexture.FScale / 2, ATexture.FRegion.Height * ATexture.FScale / 2);
+  obbB.Center := Math.Point(ATexture.FPos.X, ATexture.FPos.Y);
+  obbB.Extents := Math.Point(ATexture.FRegion.Width * ATexture.FScale / 2, ATexture.FRegion.Height * ATexture.FScale / 2);
   obbB.Rotation := ATexture.FAngle;
 
   // Check for collision and return result
-  Result := TMath.OBBIntersect(obbA, obbB);
+  Result := Math.OBBIntersect(obbA, obbB);
 end;
 
 class function TTexture.LoadFromFile(const AFilename: string; const AColorKey: PColor): TTexture;
@@ -6135,6 +6191,44 @@ begin
       Exit;
     end;
     Result.Load(LIO, AColorKey);
+  finally
+    LIO.Free();
+  end;
+end;
+
+class function TTexture.LoadSVGFromFile(const AFilename: string;  const AUnits: string; const ADPI: Single; const AColorKey: PColor): TTexture;
+var
+  LIO: TIO;
+begin
+  Result := TTexture.Create();
+
+  LIO := TFileIO.Open(AFilename, iomRead);
+  try
+    Result.LoadSVG(LIO, AUnits, ADPI, AColorKey);
+  finally
+    LIO.Free();
+  end;
+end;
+
+class function TTexture.LoadSVGFromZipFile(const AZipFile: TZipFile; const AFilename: string;  const AUnits: string; const ADPI: Single; const AColorKey: PColor): TTexture;
+var
+  LIO: TIO;
+begin
+  Result := nil;
+  if not Assigned(AZipFile) then Exit;
+  if not AZipFile.IsOpen() then Exit;
+
+  Result := TTexture.Create();
+
+  LIO := AZipFile.OpenFile(AFilename);
+  try
+    if not Assigned(LIO) then
+    begin
+      Result.Free();
+      Result := nil;
+      Exit;
+    end;
+    Result.LoadSVG(LIO, AUnits, ADPI, AColorKey);
   finally
     LIO.Free();
   end;
@@ -6189,7 +6283,7 @@ begin
     AIO.Read(LBuffer.Memory, LFileSize);
     if stbtt_InitFont(@LFontInfo, LBuffer.Memory, 0) = 0 then Exit;
     LGlyphChars := DEFAULT_GLYPHS + aGlyphs;
-    LGlyphChars := TUtils.RemoveDuplicates(LGlyphChars);
+    LGlyphChars := Utils.RemoveDuplicates(LGlyphChars);
     NumOfGlyphs := LGlyphChars.Length;
     SetLength(LCodePoints, NumOfGlyphs);
 
@@ -6437,7 +6531,7 @@ var
 begin
   Result := nil;
   if not Assigned(AWindow) then Exit;
-  if not TUtils.ResourceExist(HInstance, CDefaultFontResName) then Exit;
+  if not Utils.ResourceExist(HInstance, CDefaultFontResName) then Exit;
 
   LResStream := TResourceStream.Create(HInstance, CDefaultFontResName, RT_RCDATA);
   try
@@ -6460,16 +6554,15 @@ begin
 end;
 
 { Video }
-procedure TVideo_MADataCallback(ADevice: Pma_device; AOutput: Pointer;
-  AInput: Pointer; AFrameCount: ma_uint32); cdecl;
+procedure TVideo_MADataCallback(ADevice: Pma_device; AOutput: Pointer; AInput: Pointer; AFrameCount: ma_uint32); cdecl;
 var
   LReadPtr: PSingle;
   LFramesNeeded: Integer;
 begin
   LFramesNeeded := AFrameCount * 2;
-  LReadPtr := PSingle(TVideo.LRingBuffer.DirectReadPointer(LFramesNeeded));
+  LReadPtr := PSingle(Video.FRingBuffer.DirectReadPointer(LFramesNeeded));
 
-  if TVideo.LRingBuffer.AvailableBytes >= LFramesNeeded then
+  if Video.FRingBuffer.AvailableBytes >= LFramesNeeded then
     begin
       Move(LReadPtr^, AOutput^, LFramesNeeded * SizeOf(Single));
     end
@@ -6479,123 +6572,120 @@ begin
     end;
 end;
 
-procedure TVideo_PLMAudioDecodeCallback(APLM: Pplm_t; ASamples: Pplm_samples_t;
-  AUserData: Pointer); cdecl;
+procedure TVideo_PLMAudioDecodeCallback(APLM: Pplm_t; ASamples: Pplm_samples_t; AUserData: Pointer); cdecl;
 begin
-  TVideo.LRingBuffer.Write(ASamples^.interleaved, ASamples^.count*2);
+  Video.FRingBuffer.Write(ASamples^.interleaved, ASamples^.count*2);
 end;
 
-procedure TVideo_PLMVideoDecodeCallback(APLM: Pplm_t; AFrame: Pplm_frame_t;
-  AUserData: Pointer); cdecl;
+procedure TVideo_PLMVideoDecodeCallback(APLM: Pplm_t; AFrame: Pplm_frame_t; AUserData: Pointer); cdecl;
 begin
   // convert YUV to RGBA
-  plm_frame_to_rgba(AFrame, @TVideo.LRGBABuffer[0],
-    Round(TVideo.FTexture.FSize.Width*4));
+  plm_frame_to_rgba(AFrame, @Video.FRGBABuffer[0], Round(Video.FTexture.FSize.Width*4));
 
   // update OGL texture
-  glBindTexture(GL_TEXTURE_2D, TVideo.FTexture.FHandle);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, AFrame^.width, AFrame^.height,
-    GL_RGBA, GL_UNSIGNED_BYTE, TVideo.LRGBABuffer);
+  glBindTexture(GL_TEXTURE_2D, Video.FTexture.FHandle);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, AFrame^.width, AFrame^.height, GL_RGBA, GL_UNSIGNED_BYTE, Video.FRGBABuffer);
 end;
 
-procedure TVideo_PLMLoadBufferCallback(ABuffer: pplm_buffer_t;
-  AUserData: pointer); cdecl;
+procedure TVideo_PLMLoadBufferCallback(ABuffer: pplm_buffer_t; AUserData: pointer); cdecl;
 var
   LBytesRead: Int64;
 begin
   // read data from inputstream
-  LBytesRead := TVideo.FIO.Read(@TVideo.FStaticPlmBuffer[0], TVideo.BUFFERSIZE);
+  LBytesRead := Video.FIO.Read(@Video.FStaticPlmBuffer[0], Video.BUFFERSIZE);
 
   // push LBytesRead to PLM buffer
   if LBytesRead > 0 then
     begin
-      plm_buffer_write(aBuffer, @TVideo.FStaticPlmBuffer[0], LBytesRead);
+      plm_buffer_write(aBuffer, @Video.FStaticPlmBuffer[0], LBytesRead);
     end
   else
     begin
       // set status to stopped
-      TVideo.FStatus := vsStopped;
+      Video.FStatus := vsStopped;
     end;
 end;
 
-class constructor TVideo.Create;
+class constructor Video.Create;
 begin
 end;
 
-class destructor TVideo.Destroy;
+class destructor Video.Destroy;
 begin
-  Stop;
+  Stop();
 end;
 
-class function  TVideo.Play(const AInputStream: TIO; const AVolume: Single; const ALoop: Boolean): Boolean;
+class function  Video.Play(const AIO: TIO; const AVolume: Single; const ALoop: Boolean): Boolean;
 var
   LBuffer: Pplm_buffer_t;
 begin
   Result := False;
+
+  Stop();
 
   // set volume & loop status
   FVolume := AVolume;
   FLoop := ALoop;
 
   // init ringbuffer
-  LRingBuffer := TVirtualRingBuffer<Single>.Create(CSampleRate*2);
-  if not Assigned(LRingBuffer) then Exit;
+  FRingBuffer := TVirtualRingBuffer<Single>.Create(CSampleRate*2);
+  if not Assigned(FRingBuffer) then Exit;
 
   // init device for audio playback
-  LDeviceConfig := ma_device_config_init(ma_device_type_playback);
-  LDeviceConfig.playback.format := ma_format_f32;
-  LDeviceConfig.playback.channels := 2;
-  LDeviceConfig.sampleRate := CSampleRate;
-  LDeviceConfig.dataCallback := @TVideo_MADataCallback;
-  if ma_device_init(nil, @LDeviceConfig, @LDevice) <> MA_SUCCESS then Exit;
-  ma_device_start(@LDevice);
+  FDeviceConfig := ma_device_config_init(ma_device_type_playback);
+  FDeviceConfig.playback.format := ma_format_f32;
+  FDeviceConfig.playback.channels := 2;
+  FDeviceConfig.sampleRate := CSampleRate;
+  FDeviceConfig.dataCallback := @TVideo_MADataCallback;
+  if ma_device_init(nil, @FDeviceConfig, @FDevice) <> MA_SUCCESS then Exit;
+  ma_device_start(@FDevice);
   SetVolume(AVolume);
 
   // set the input stream
-  FIO := AInputStream;
+  FIO := AIO;
   FStatus := vsPlaying;
 
   // init plm buffer
   LBuffer := plm_buffer_create_with_capacity(BUFFERSIZE);
   if not Assigned(LBuffer) then
   begin
-    ma_device_uninit(@LDevice);
-    LRingBuffer.Free;
+    ma_device_uninit(@FDevice);
+    FRingBuffer.Free;
     Exit;
   end;
 
   plm_buffer_set_load_callback(LBuffer, TVideo_PLMLoadBufferCallback, Self);
-  LPLM := plm_create_with_buffer(LBuffer, 1);
-  if not Assigned(LPLM) then
+  FPLM := plm_create_with_buffer(LBuffer, 1);
+  if not Assigned(FPLM) then
   begin
     plm_buffer_destroy(LBuffer);
-    ma_device_uninit(@LDevice);
-    LRingBuffer.Free;
+    ma_device_uninit(@FDevice);
+    FRingBuffer.Free;
     Exit;
   end;
 
   // create video render texture
   FTexture := TTexture.Create;
   FTexture.SetBlend(tbNone);
-  FTexture.Allocate(plm_get_width(LPLM), plm_get_height(LPLM));
+  FTexture.Allocate(plm_get_width(FPLM), plm_get_height(FPLM));
 
   // alloc the video rgba buffer
-  SetLength(LRGBABuffer,
+  SetLength(FRGBABuffer,
     Round(FTexture.GetSize.Width*FTexture.GetSize.Height*4));
-  if not Assigned(LRGBABuffer) then
+  if not Assigned(FRGBABuffer) then
   begin
     plm_buffer_destroy(LBuffer);
-    ma_device_uninit(@LDevice);
-    LRingBuffer.Free;
+    ma_device_uninit(@FDevice);
+    FRingBuffer.Free;
     Exit;
   end;
 
   // set the audio lead time
-  plm_set_audio_lead_time(LPLM, (CSampleSize*2)/LDeviceConfig.sampleRate);
+  plm_set_audio_lead_time(FPLM, (CSampleSize*2)/FDeviceConfig.sampleRate);
 
   // set audio/video callbacks
-  plm_set_audio_decode_callback(LPLM, TVideo_PLMAudioDecodeCallback, Self);
-  plm_set_video_decode_callback(LPLM, TVideo_PLMVideoDecodeCallback, Self);
+  plm_set_audio_decode_callback(FPLM, TVideo_PLMAudioDecodeCallback, Self);
+  plm_set_video_decode_callback(FPLM, TVideo_PLMVideoDecodeCallback, Self);
 
   FTexture.SetPivot(0, 0);
   FTexture.SetAnchor(0, 0);
@@ -6605,52 +6695,52 @@ begin
   Result := True;
 end;
 
-class procedure TVideo.Stop();
+class procedure Video.Stop();
 begin
-  if not Assigned(LPLM) then Exit;
+  if not Assigned(FPLM) then Exit;
 
-  ma_device_stop(@LDevice);
-  ma_device_uninit(@LDevice);
+  ma_device_stop(@FDevice);
+  ma_device_uninit(@FDevice);
 
-  plm_destroy(LPLM);
+  plm_destroy(FPLM);
 
   FIO.Free;
   FTexture.Free;
-  LRingBuffer.Free;
+  FRingBuffer.Free;
 
-  LPLM := nil;
-  LRingBuffer := nil;
+  FPLM := nil;
+  FRingBuffer := nil;
   FStatus := vsStopped;
   FTexture := nil;
 end;
 
-class function  TVideo.Update(): Boolean;
+class function  Video.Update(): Boolean;
 begin
   Result := False;
-  if not Assigned(LPLM) then Exit;
+  if not Assigned(FPLM) then Exit;
   if FStatus = vsStopped then
   begin
-    ma_device_stop(@LDevice);
+    ma_device_stop(@FDevice);
 
     if FLoop then
     begin
-      plm_rewind(LPLM);
+      plm_rewind(FPLM);
       FIO.Seek(0, smStart);
-      LRingBuffer.Clear;
-      ma_device_start(@LDevice);
+      FRingBuffer.Clear;
+      ma_device_start(@FDevice);
       SetVolume(FVolume);
       FStatus := vsPlaying;
-      plm_decode(LPLM, FrameLimitTimer.TargetTime());
+      plm_decode(FPLM, FrameLimitTimer.TargetTime());
       Exit;
     end;
     Result := True;
     Exit;
   end;
 
-  plm_decode(LPLM, FrameLimitTimer.TargetTime());
+  plm_decode(FPLM, FrameLimitTimer.TargetTime());
 end;
 
-class procedure TVideo.Draw(const X, Y, AScale: Single);
+class procedure Video.Draw(const X, Y, AScale: Single);
 begin
   if FStatus <> vsPlaying then Exit;
   FTexture.SetPos(X, Y);
@@ -6658,20 +6748,31 @@ begin
   FTexture.Draw();
 end;
 
-class function  TVideo.Status(): TVideoStatus;
+class function  Video.GetStatus(): Status;
 begin
   Result := FStatus;
 end;
 
-class function  TVideo.GetVolume(): Single;
+class function  Video.GetVolume(): Single;
 begin
   Result := FVolume;
 end;
 
-class procedure TVideo.SetVolume(const AVolume: Single);
+class procedure Video.SetVolume(const AVolume: Single);
 begin
   FVolume := EnsureRange(AVolume, 0, 1);
-   ma_device_set_master_volume(@LDevice, TMath.UnitToScalarValue(FVolume, 1));
+  ma_device_set_master_volume(@FDevice, Math.UnitToScalarValue(FVolume, 1));
 end;
+
+class function  Video.GetLooping(): Boolean;
+begin
+  Result := FLoop;
+end;
+
+class procedure Video.SetLooping(const ALoop: Boolean);
+begin
+  FLoop := ALoop;
+end;
+
 
 end.
