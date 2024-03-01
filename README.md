@@ -34,6 +34,8 @@ SGT offers an extensive suite of features:
 - Implements buffer management, including a virtual memory buffer and ring-buffer.
 - Features a precise timer system for event management, with deterministic operations to start, stop, and check elapsed time.
 - Console utilities for outputting to and interacting with the application console are provided.
+- Standalone ZIP Compression tool (`ZipArc.exe`)
+- Tools for converting video/audio to SGT compatible formats (`_ConvertVideo.bat/_ConvertAudio.bat`)
 
 ### Minimum Requirements 
 - Should work on Windows 10+ (64 bits)
@@ -45,7 +47,8 @@ SGT offers an extensive suite of features:
 - Please extract the contents of the archive to your preferred directory.
 - Incorporate the `installdir\src` directory into Delphi’s library path to ensure the library's source files are discoverable for any project. For project-specific access, append the same to the project's search path.
 - Proceed to open `SparkGameToolkit.groupproj` in Delphi to compile and execute the examples, demonstrations, and tools. This will provide a comprehensive display of the toolkit's capabilities and its application methodology.
-- For further insights into utilization, refer to the samples provided within the `installdir\examples` directory. To observe the Spark Game Toolkit features in action, compile and execute the `Testbed` application. It is imperative to construct the `Data.zip` archive since it is a prerequisite for most examples. To assemble the archive, initiate `Testbed`, and navigate to `Build Zip Archive` menu option.
+- For further insights into utilization, refer to the samples provided within the `installdir\examples` directory. To observe the Spark Game Toolkit features in action, compile and execute the `Testbed` application. It is imperative to construct the `Data.zip` archive since it is a prerequisite for most examples. To assemble the archive, initiate `Testbed`, and navigate to `Build Zip Archive` menu option. Alternatively, click the `_BuildArc.bat` file in the `installdir\bin` folder.
+- You can use `_ConvertVideo.bat` and `_ConvertAudio.bat` to convert video/audio to SGT compatible formats. You can call them like such: `_ConvertVideo.bat "source.[mp4]" "dest.MPG"` or `_ConvertVideo.bat "source.[mp4]" "dest.OGG"`. The source file can be any format supported by **ffmpeg**. See `ffmpeg.txt` in `installdir\bin` for details.
 - You **MUST** include `SGT.dll` with your projects. It's just a dependency DLL, containing compiled 3rd party open-source C libraries used to make the toolkit. See <a href="THIRDPARTY.md" target="_blank">THIRDPARTY.md</a> for details.
 
 ### Minimal Example

@@ -400,7 +400,7 @@ const
   GLFW_DONT_CARE = -1;
   ENET_VERSION_MAJOR = 2;
   ENET_VERSION_MINOR = 3;
-  ENET_VERSION_PATCH = 7;
+  ENET_VERSION_PATCH = 10;
   ENET_TIME_OVERFLOW = 86400000;
   CLOCK_MONOTONIC = 0;
   ENET_SOCKET_NULL = INVALID_SOCKET;
@@ -9003,7 +9003,7 @@ procedure enet_free(p1: Pointer); cdecl;
 function enet_packet_create(const p1: Pointer; p2: NativeUInt; p3: enet_uint32): PENetPacket; cdecl;
   external SGT_DLL name _PU + 'enet_packet_create';
 
-function enet_packet_resize(p1: PENetPacket; p2: NativeUInt): Integer; cdecl;
+function enet_packet_resize(p1: PENetPacket; p2: NativeUInt): PENetPacket; cdecl;
   external SGT_DLL name _PU + 'enet_packet_resize';
 
 function enet_packet_copy(p1: PENetPacket): PENetPacket; cdecl;

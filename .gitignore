@@ -71,6 +71,7 @@ modules/
 
 # SparkGameToolkit
 !bin/SGT.dll
+!bin/ZipArc.exe
 bin/Data.zip
 bin/imgui.ini
 

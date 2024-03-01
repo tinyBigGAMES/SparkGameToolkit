@@ -104,6 +104,12 @@ type
     procedure Run(); virtual;
   end;
 
+  TBaseObjectClass = class of TBaseObject;
+
+procedure RunObject(const AObject: TBaseObjectClass);
+
+type
+
   { Utils }
   Utils = class
   private const
@@ -1306,6 +1312,18 @@ begin
 end;
 
 { TBaseObject }
+procedure RunObject(const AObject: TBaseObjectClass);
+var
+  LObject: TBaseObject;
+begin
+  LObject := AObject.Create();
+  try
+    LObject.Run();
+  finally
+    LObject.Free();
+  end;
+end;
+
 constructor TBaseObject.Create();
 begin
   inherited;
