@@ -44,349 +44,350 @@ interface
 uses
   System.Generics.Collections,
   System.SysUtils,
+  System.IOUtils,
+  System.Math,
   SGT.Deps,
   SGT.OGL,
   SGT.Lib;
+
+type
+
+  { TTestbed }
+  TTestbed = class(TBaseObject)
+  private const
+    CZipFilename = 'Data.zip';
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+    procedure Run(); override;
+    procedure TestZipFile();
+    procedure TestWindow();
+    procedure TestTexture();
+    procedure TestAudio();
+    procedure TestVideo();
+    procedure TestImGui();
+  end;
 
 procedure RunTests();
 
 implementation
 
-const
-  CZipFilename = 'Data.zip';
-
+procedure RunTests();
 var
-  mem: TDictionary<Pointer, NativeUInt>;
-  stat_total_allocs: NativeUInt;
-  stat_total_mem: NativeUInt;
-  ZipFile: TZipFile;
-
-//void error_callback(int e, const char *d)
-procedure glfw_error_callback(e: integer; const d: pansichar); cdecl;
+  LTestbed: TTestbed;
 begin
-  writeln(Format('Error %d: %s ', [e, d]));
+  LTestbed := TTestbed.Create();
+  try
+    LTestbed.Run();
+  finally
+    LTestbed.Free();
+  end;
 end;
 
-function glfw_allocate(size: NativeUInt; user: Pointer): Pointer; cdecl;
+{ TTestbed }
+constructor TTestbed.Create();
 begin
-  GetMem(Result, size);
-  mem.Add(Result, size);
-  inc(stat_total_allocs);
-  stat_total_mem := stat_total_mem + size;
+  inherited;
 end;
 
-function glfw_reallocate(block: Pointer; size: NativeUInt; user: Pointer): Pointer; cdecl;
+destructor TTestbed.Destroy();
 begin
-  mem.Remove(block);
-  ReallocMem(block, size);
-  Result := block;
-  mem.Add(block, size);
-  inc(stat_total_allocs);
-  stat_total_mem := stat_total_mem + size;
+  inherited;
 end;
 
-procedure  glfw_deallocate(block: Pointer; user: Pointer); cdecl;
-begin
-  mem.Remove(block);
-  FreeMem(block);
-end;
-
-procedure initmem;
-begin
-  mem := TDictionary<Pointer, NativeUInt>.Create;
-  stat_total_allocs := 0;
-  stat_total_mem := 0;
-end;
-
-procedure donemem;
+procedure TTestbed.Run();
 var
-  item: TPair<Pointer, NativeUint>;
+  LOption: string;
+  LDone: Boolean;
 begin
-  if mem.Count > 0 then
+  if not InitLib() then Exit;
+
+  LDone := False;
+  while not LDone do
   begin
-    writeln;
-    writeln('Dangling allocations auto released: ', mem.Count);
+    Console.Clear();
+    Console.PrintLn('>>> MENU <<<');
+    Console.PrintLn('1. Build ZipFile');
+    Console.PrintLn('2. Window');
+    Console.PrintLn('3. Texture');
+    Console.PrintLn('4. Audio');
+    Console.PrintLn('5. Video');
+    Console.PrintLn('Q. Quit');
+    Console.PrintLn();
+    Console.Print('Select: ');
+    LOption := Console.ReadLnX(['q', 'Q', '1', '2', '3', '4', '5'], 1).ToLower;
+    if LOption.Length = 0 then continue;
+    case Ord(LOption[1]) of
+      Ord('1'): TestZipFile();
+      Ord('2'): TestWindow();
+      Ord('3'): TestTexture();
+      Ord('4'): TestAudio();
+      Ord('5'): TestVideo();
+      Ord('6'): TestImGui();
+      Ord('q'): LDone := True;
+    end;
   end;
 
-  for item in mem do
-  begin
-    FreeMem(item.Key);
-    WriteLn('Size: ', item.Value, ' bytes');
-  end;
-
-  writeln;
-  writeln('total allocations: ', stat_total_allocs);
-  writeln('total memory used: ', stat_total_mem);
-
-  mem.Free;
+  QuitLib();
 end;
 
-procedure Test01();
-const
-  WINDOW_WIDTH = 1920 div 2;
-  WINDOW_HEIGHT = 1080 div 2;
-type
-  TColor = record
-    r,g,b,a: Single;
-  end;
-var
-  window: PGLFWwindow;
-  io: PImGuiIO;
-  show_demo_window: Boolean;
-  clear_color: ImVec4;
-  display_w, display_h: Integer;
-  color: TColor;
-  scale,xscale,yscale: Single;
-  allocator: GLFWallocator;
-
-  procedure drawRect(x, y, width, height: Single);
-  begin
-    // Draw a rectangle
-    glBegin(GL_QUADS);
-    glVertex2f(x, y);
-    glVertex2f(x + width, y);
-    glVertex2f(x + width, y + height);
-    glVertex2f(x, y + height);
-    glEnd;
-  end;
-
-procedure DrawFilledRect(const X, Y, AWidth, AHeight: Single; const AColor: TColor; const AAngle: Single);
-var
-  HalfWidth, HalfHeight: Single;
+procedure TTestbed.TestZipFile();
 begin
-
-  HalfWidth := AWidth / 2;
-  HalfHeight := AHeight / 2;
-
-  glColor4f(AColor.r, AColor.g, AColor.b, AColor.a);
-
-  glPushMatrix;  // Save the current matrix
-
-  // Translate to the center point
-  glTranslatef(X, Y, 0);
-
-  // Rotate around the center
-  glRotatef(AAngle, 0, 0, 1);
-
-  glBegin(GL_QUADS);
-    glVertex2f(-HalfWidth, -HalfHeight);      // Bottom-left corner
-    glVertex2f(HalfWidth, -HalfHeight);       // Bottom-right corner
-    glVertex2f(HalfWidth, HalfHeight);        // Top-right corner
-    glVertex2f(-HalfWidth, HalfHeight);       // Top-left corner
-  glEnd;
-
-  glPopMatrix;  // Restore the original matrix
-end;
-
-begin
-  initmem();
-
-  show_demo_window := True;
-  clear_color.x := 0.45;
-  clear_color.y := 0.55;
-  clear_color.z := 0.60;
-  clear_color.w := 1.0;
-
-  glfwSetErrorCallback(glfw_error_callback);
-  allocator.allocate := glfw_allocate;
-  allocator.reallocate := glfw_reallocate;
-  allocator.deallocate := glfw_deallocate;
-  allocator.user := nil;
-  glfwInitAllocator(@allocator);
-
-  if glfwInit() = GLFW_FALSE then Exit;
-
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-  glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
-
-  window := glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, 'Hello World', nil, nil);
-  if not Assigned(window) then
-  begin
-    glfwTerminate();
-    Exit;
-  end;
-
-  glfwMakeContextCurrent(window);
-  if not LoadOpenGL() then
-  begin
-    glfwDestroyWindow(window);
-    glfwTerminate();
-    Exit;
-  end;
-
-  glfwGetWindowContentScale(window, @xscale, @yscale); // Get DPI scale factor
-  scale := (xscale + yscale) / 2.0;
-
-
-  if GLAD_GL_VERSION_2_1 then
-    writeln('opengl 2.1 supported');
-
-  writeln(PAnsiChar(glGetString(GL_VERSION)));
-
-  glfwSwapInterval(1);
-
-  igCreateContext(nil);
-  io := igGetIO();
-  io.ConfigFlags := ImGuiConfigFlags_NavEnableKeyboard or
-                      ImGuiConfigFlags_NavEnableGamepad or
-                      ImGuiConfigFlags_DockingEnable;
-
-  ImGui_ImplGlfw_InitForOpenGL(window, true);
-  ImGui_ImplOpenGL2_Init();
-
-  ImFontAtlas_AddFontFromFileTTF(io.Fonts, 'res/fonts/JetBrainsMono-Regular.ttf', 16*scale, nil, nil);
-
-  while glfwWindowShouldClose(window) = GLFW_FALSE do
-  begin
-    glfwPollEvents();
-
-    ImGui_ImplOpenGL2_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    igNewFrame();
-
-    if show_demo_window then
-      igShowDemoWindow(@show_demo_window);
-
-    igBegin('Hello, world!', nil, ImGuiWindowFlags_AlwaysAutoResize);
-    igText('This is some useful text.');
-    igCheckbox('Demo Window', @show_demo_window);
-    igEnd();
-
-    glfwGetWindowSize(window, @display_w, @display_h);
-    glViewport(0, 0, display_w, display_h);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0,display_w, display_h, 0, -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glScalef(scale, scale, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
-
-    glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
-
-    igRender();
-    ImGui_ImplOpenGL2_RenderDrawData(igGetDrawData());
-
-    color.r := 1;
-    color.g := 0;
-    color.b := 0;
-    color.a := 1;
-    DrawFilledRect(WINDOW_WIDTH-50, 50, 100, 100, color, 0);
-    glfwSwapBuffers(window);
-  end;
-
-  ImGui_ImplOpenGL2_Shutdown();
-  ImGui_ImplGlfw_Shutdown();
-  igDestroyContext(nil);
-
-  glfwMakeContextCurrent(nil);
-  glfwDestroyWindow(window);
-  glfwTerminate();
-
-  donemem();
-end;
-
-procedure Test02();
-begin
+  Console.PrintLn(Console.CRLF+'Build zip file "%s"...', [CZipFilename]);
   if TZipFile.Build('Data.zip', 'res', nil, nil) then
     Console.PrintLn(Console.CRLF+Console.CRLF+'Success!', Console.MAGENTA)
   else
-    Console.PrintLn(Console.CRLF+Console.CRLF+'Failed!', Console.RED)
+    Console.PrintLn(Console.CRLF+Console.CRLF+'Failed!', Console.RED);
+
+  Console.Pause();
 end;
 
-procedure Test03();
-var
-  LZipFile: TZipFile;
-  LZipFileIO: TZipFileIO;
-begin
-  LZipFile := TZipFile.Init('Data.zip');
-  LZipFileIO := LZipFile.OpenFile('res/music/song01.ogg');
-  Console.PrintLn('Size: %d', [LZipFileIO.Size()]);
-  LZipFileIO.Free();
-  LZipFile.Free();
-end;
-
-procedure Test04();
-begin
-  Audio.Open();
-  Audio.PlayMusic(TZipFileIO.Open(CZipFilename, 'res/music/song01.ogg'), 1.0, True);
-  readln;
-  Audio.UnloadMusic;
-  Audio.Close;
-end;
-
-procedure Test05();
+procedure TTestbed.TestWindow();
 var
   LWindow: TWindow;
   LFont: TFont;
-  LTexture: TTexture;
+  LPos: TPoint;
 begin
-  LWindow := TWindow.Init('SGT: Video Playback');
+  LWindow := TWindow.Init('SGT: Window');
 
-  LFont := TFont.LoadDefault(LWindow, 12);
-
-  Audio.Open();
-  Audio.PlayMusic(TZipFileIO.Open(CZipFilename, 'res/music/song01.ogg'), 0.7, False);
-
-  //TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/tinyBigGAMES.mpg'), 1.0, True);
-  //TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/sample01.mpg'), 1.0, True);
-  //TVideo.Play(TZipFileIO.Open(CZipFilename, 'res/videos/Spark1.mpg'), 1.0, True);
-  Video.Play(TZipFileIO.Open(CZipFilename, 'res/videos/Spark2.mpg'), 0.8, False);
-
-
-  LTexture := TTexture.LoadSVGFromZipFile(ZipFile, 'res/svg/tiger.svg');
-  LTexture.SetPos(LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT);
-  LTexture.SetScale(0.50);
+  LFont := TFont.LoadDefault(LWindow, 10);
 
   while not LWindow.ShouldClose() do
   begin
     LWindow.StartFrame();
 
-    if LWindow.GetKey(KEY_ESCAPE, isWasPressed) then
-      LWindow.SetShouldClose(True);
+      if Lwindow.GetKey(KEY_ESCAPE, isWasPressed) then
+        LWindow.SetShouldClose(True);
 
-    Video.Update();
+      LWindow.StartDrawing();
 
-    LWindow.StartDrawing();
+      LWindow.Clear(DARKSLATEBROWN);
 
-    LWindow.Clear(DARKSLATEBROWN);
+      LPos := Math.Point(3, 3);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
 
-    Video.Draw(0, 0, 0.5);
-
-    LTexture.Draw();
-
-    LFont.DrawText(LWindow, 3, 3, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-
-    LWindow.EndDrawing();
+      LWindow.EndDrawing();
 
     LWindow.EndFrame();
-
   end;
 
-  LTexture.Free();
-  Video.Stop();
-  Audio.UnloadMusic;
-  Audio.Close();
   LFont.Free();
   LWindow.Free();
 end;
 
-procedure RunTests();
+procedure TTestbed.TestTexture();
+var
+  LZipFile: TZipFile;
+  LWindow: TWindow;
+  LFont: TFont;
+  LPos: TPoint;
+  LTexture: TTexture;
+  LAngle: Single;
 begin
-  if not InitLib() then Exit;
-  ZipFile := TZipFile.Init(CZipFilename);
+  LZipFile := TZipFile.Init(CZipFilename);
 
-  Console.PrintLn(SGT_PROJECT+Console.CRLF, Console.DARKGREEN);
-  //Test01();
-  //Test02();
-  //Test03();
-  //Test04();
-  Test05();
-  Console.Pause();
+  LWindow := TWindow.Init('SGT: Texture');
 
-  ZipFile.Free();
-  QuitLib();
+  LFont := TFont.LoadDefault(LWindow, 10);
+
+  LTexture := TTexture.LoadFromZipFile(LZipFile, 'res/images/SGT.png');
+  LTexture.SetPos(LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT);
+
+  LAngle := 0;
+
+  while not LWindow.ShouldClose() do
+  begin
+    LAngle := LAngle + 0.1;
+    Math.ClipVaLuef(LAngle, 0, 360, True);
+    LTexture.SetAngle(LAngle);
+
+    LWindow.StartFrame();
+
+      if Lwindow.GetKey(KEY_ESCAPE, isWasPressed) then
+        LWindow.SetShouldClose(True);
+
+      LWindow.StartDrawing();
+
+      LWindow.Clear(DARKSLATEBROWN);
+
+      LTexture.Draw();
+
+      LPos := Math.Point(3, 3);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+
+      LWindow.EndDrawing();
+
+    LWindow.EndFrame();
+  end;
+
+  LTexture.Free();
+  LFont.Free();
+  LWindow.Free();
+  LZipFile.Free();
+end;
+
+procedure TTestbed.TestAudio();
+var
+  LZipFile: TZipFile;
+  LWindow: TWindow;
+  LFont: TFont;
+  LPos: TPoint;
+  LSound: array[0..7] of Integer;
+  LChan: integer;
+  LSongNum: Integer;
+  LSongFilename: string;
+
+  procedure PlaySong;
+  begin
+    Audio.UnloadMusic();
+    LSongFilename := Format('res/music/song%.2d.ogg', [LSongNum]);
+    Audio.PlayMusicFromZipFile(LZipFile, LSongFilename, 1.0, True);
+  end;
+
+begin
+  LZipFile := TZipFile.Init(CZipFilename);
+
+  LWindow := TWindow.Init('SGT: Audio');
+
+  LFont := TFont.LoadDefault(LWindow, 10);
+
+  Audio.Open();
+
+  LSongNum := 1;
+  LChan := -1;
+
+  LSound[0] := Audio.LoadSoundFromZipFile(LZipFile, 'res/sfx/digthis.ogg');
+  LSound[1] := Audio.LoadSoundFromZipFile(LZipFile, 'res/sfx/samp0.ogg');
+  LSound[2] := Audio.LoadSoundFromZipFile(LZipFile, 'res/sfx/samp1.ogg');
+  LSound[3] := Audio.LoadSoundFromZipFile(LZipFile, 'res/sfx/samp2.ogg');
+  LSound[4] := Audio.LoadSoundFromZipFile(LZipFile, 'res/sfx/samp3.ogg');
+  LSound[5] := Audio.LoadSoundFromZipFile(LZipFile, 'res/sfx/samp4.ogg');
+  LSound[6] := Audio.LoadSoundFromZipFile(LZipFile, 'res/sfx/samp5.ogg');
+  LSound[7] := Audio.LoadSoundFromZipFile(LZipFile, 'res/sfx/explo_rock.ogg');
+
+  Audio.ReserveChannel(0, True);
+  Audio.ReserveChannel(1, True);
+
+  PlaySong();
+
+  while not LWindow.ShouldClose() do
+  begin
+    LWindow.StartFrame();
+
+      if LWindow.GetKey(KEY_ESCAPE, isWasPressed) then
+        LWindow.SetShouldClose(True);
+
+      if LWindow.GetKey(KEY_1, isWasPressed) then
+        Audio.PlaySound(LSound[0], 0, 1.0, False);
+
+      if LWindow.GetKey(KEY_2, isWasPressed) then
+        LChan := Audio.PlaySound(LSound[1], 1, 1.0, True);
+
+      if LWindow.GetKey(KEY_3, isWasPressed) then
+        Audio.PlaySound(LSound[2], Audio.CHANNEL_DYNAMIC, 1.0, False);
+
+      if LWindow.GetKey(KEY_4, isWasPressed) then
+        Audio.PlaySound(LSound[3], Audio.CHANNEL_DYNAMIC, 1.0, False);
+
+      if LWindow.GetKey(KEY_5, isWasPressed) then
+        Audio.PlaySound(LSound[4], Audio.CHANNEL_DYNAMIC, 1.0, False);
+
+      if LWindow.GetKey(KEY_6, isWasPressed) then
+        Audio.PlaySound(LSound[5], Audio.CHANNEL_DYNAMIC, 1.0, False);
+
+      if LWindow.GetKey(KEY_7, isWasPressed) then
+        Audio.PlaySound(LSound[6], Audio.CHANNEL_DYNAMIC, 1.0, False);
+
+      if LWindow.GetKey(KEY_8, isWasPressed) then
+        Audio.PlaySound(LSound[7], Audio.CHANNEL_DYNAMIC, 1.0, False);
+
+      if LWindow.GetKey(KEY_9, isWasPressed) then
+        Audio.StopChannel(LChan);
+
+      if LWindow.GetKey(KEY_UP, isWasPressed) then
+        begin
+          Inc(LSongNum);
+          LSongNum := EnsureRange(LSongNum, 1, 14);
+          PlaySong();
+        end
+      else if LWindow.GetKey(KEY_DOWN, isWasPressed) then
+        begin
+          Dec(LSongNum);
+          LSongNum := EnsureRange(LSongNum, 1, 14);
+          PlaySong();
+        end;
+
+      LWindow.StartDrawing();
+
+      LWindow.Clear(DARKSLATEBROWN);
+
+      LPos := Math.Point(3, 3);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( '1-8', 'Play sound'), [FrameLimitTimer.FrameRate()]);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( '9', 'Stop sound on channel #1'), [FrameLimitTimer.FrameRate()]);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'UP/DOWN', 'Next/Prev song'), [FrameLimitTimer.FrameRate()]);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, YELLOW,haLeft, Utils.HudTextItem( 'Song', '%s'), [TPath.GetFileName(LSongFilename)]);
+
+      LWindow.EndDrawing();
+
+    LWindow.EndFrame();
+  end;
+
+  Audio.Close();
+
+  LFont.Free();
+  LWindow.Free();
+  LZipFile.Free();
+end;
+
+procedure TTestbed.TestVideo();
+var
+  LWindow: TWindow;
+  LFont: TFont;
+  LPos: TPoint;
+begin
+  LWindow := TWindow.Init('SGT: Video');
+
+  LFont := TFont.LoadDefault(LWindow, 10);
+
+  Audio.Open();
+
+  Video.Play(TZipFileIO.Open(CZipFilename, 'res/videos/Spark2.mpg'), 0.8, True);
+
+  while not LWindow.ShouldClose() do
+  begin
+    LWindow.StartFrame();
+
+      if Lwindow.GetKey(KEY_ESCAPE, isWasPressed) then
+        LWindow.SetShouldClose(True);
+
+      LWindow.StartDrawing();
+
+      LWindow.Clear(DARKSLATEBROWN);
+
+      Video.Draw(0, 0, 0.5);
+
+      LPos := Math.Point(3, 3);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+
+      LWindow.EndDrawing();
+
+    LWindow.EndFrame();
+  end;
+
+  Video.Stop();
+  Audio.Close();
+
+  LFont.Free();
+  LWindow.Free();
+end;
+
+procedure TTestbed.TestImGui();
+begin
 end;
 
 end.

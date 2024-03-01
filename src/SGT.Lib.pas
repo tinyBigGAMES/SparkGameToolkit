@@ -77,6 +77,8 @@ const
 { Init }
 function  InitLib(): Boolean;
 procedure QuitLib();
+function  IsLibInit(): Boolean;
+procedure ResetLib();
 
 type
   { TSeekMode }
@@ -158,7 +160,6 @@ type
     CYAN         = FOREGROUND_GREEN OR FOREGROUND_BLUE;
     MAGENTA      = FOREGROUND_RED OR FOREGROUND_BLUE;
     RED          = FOREGROUND_RED;
-
   private class var
     FInputCodePage: Cardinal;
     FOutputCodePage: Cardinal;
@@ -171,7 +172,7 @@ type
     class procedure SetTextColor(AColor: Word);
     class procedure ClearLine(AColor: Word);
     class procedure ClearLineFromCursor(AColor: Word);
-    class function  GetWidth(): Integer;
+    class procedure GetSize(AWidth: PInteger; AHeight: PInteger);
     class procedure SetTitle(const ATitle: string);
     class function  HasOutput: Boolean;
     class function  WasRunFrom(): Boolean;
@@ -615,30 +616,34 @@ type
     FSound: array[0..SOUND_COUNT-1] of TSound;
     FChannel: array[0..CHANNEL_COUNT-1] of TChannel;
   protected
-    class function FindFreeSoundSlot: Integer;
-    class function FindFreeChannelSlot: Integer;
+    class function FindFreeSoundSlot(): Integer;
+    class function FindFreeChannelSlot(): Integer;
     class function ValidChannel(const AChannel: Integer): Boolean;
-    class procedure InitData;
-    class constructor Create;
-    class destructor Destroy;
+    class procedure InitData();
+    class constructor Create();
+    class destructor Destroy();
+    class procedure Update();
   public
-    class function  Open: Boolean;
-    class procedure Close;
-    class function Opened: Boolean;
-    class procedure Update;
-    class function  GetPause: Boolean;
+    class function  Open(): Boolean;
+    class procedure Close();
+    class function  Opened(): Boolean;
+    class function  GetPause(): Boolean;
     class procedure SetPause(const APause: Boolean);
-    class function  PlayMusic(const AInputStream: TIO; const AVolume: Single; const ALoop: Boolean; const APan: Single=0.0): Boolean;
-    class procedure UnloadMusic;
-    class function  GetMusicLoop: Boolean;
+    class function  PlayMusic(const AIO: TIO; const AVolume: Single; const ALoop: Boolean; const APan: Single=0.0): Boolean;
+    class function  PlayMusicFromFile(const AFilename: string; const AVolume: Single; const ALoop: Boolean; const APan: Single=0.0): Boolean;
+    class function  PlayMusicFromZipFile(const AZipFile: TZipFile; const AFilename: string; const AVolume: Single; const ALoop: Boolean; const APan: Single=0.0): Boolean;
+    class procedure UnloadMusic();
+    class function  GetMusicLoop(): Boolean;
     class procedure SetMusicLoop(const ALoop: Boolean);
-    class function  GetMusicVolume: Single;
+    class function  GetMusicVolume(): Single;
     class procedure SetMusicVolume(const AVolume: Single);
-    class function  GetMusicPan: Single;
+    class function  GetMusicPan(): Single;
     class procedure SetMusicPan(const APan: Single);
-    class function  LoadSound(const AInputStream: TIO): Integer;
+    class function  LoadSound(const AIO: TIO): Integer;
+    class function  LoadSoundFromFile(const AFilename: string): Integer;
+    class function  LoadSoundFromZipFile(const AZipFile: TZipFile; const AFilename: string): Integer;
     class procedure UnloadSound(var aSound: Integer);
-    class procedure UnloadAllSounds;
+    class procedure UnloadAllSounds();
     class function  PlaySound(const aSound, aChannel: Integer; const AVolume: Single; const ALoop: Boolean): Integer;
     class procedure ReserveChannel(const aChannel: Integer; const aReserve: Boolean);
     class procedure StopChannel(const aChannel: Integer);
@@ -1234,26 +1239,70 @@ type
     class procedure SetLooping(const ALoop: Boolean);
   end;
 
+  { TCamera }
+  TCamera = class(TBaseObject)
+  protected
+    FX, FY: Single;
+    FRotation: Single;
+    FScale: Single;
+    FWindow: TWindow;
+    procedure SetRotation(const AValue: Single);
+  public
+    property X: Single read FX write FX;
+    property Y: Single read FY write FY;
+    property Rotation: Single read FRotation write SetRotation;
+    property Scale: Single read FScale write FScale;
+    constructor Create; override;
+    destructor Destroy; override;
+    procedure Move(const X, Y: Single);
+    procedure Zoom(const AScale: Single);
+    procedure Rotate(const ARotation: Single);
+    procedure Use(const AWindow: TWindow);
+    procedure Reset();
+  end;
+
 implementation
 
 {$R SGT.Lib.res}
 
 { Init }
+var
+  LibInit: Boolean = False;
+
 function InitLib(): Boolean;
 begin
   Result := False;
+  if IsLibInit() then Exit;
 
   if glfwInit() <> GLFW_TRUE then Exit;
 
   FrameLimitTimer.Reset();
   Async.Clear();
 
-  Result := True;
+  LibInit := True;
+  Result := IsLibInit();
 end;
 
 procedure QuitLib();
 begin
+  if not IsLibInit() then Exit;
+
+  Audio.Close();
+
   glfwTerminate();
+
+  LibInit := False;
+end;
+
+function  IsLibInit(): Boolean;
+begin
+  Result := LibInit;
+end;
+
+procedure ResetLib();
+begin
+  Async.Clear();
+  FrameLimitTimer.Reset();
 end;
 
 { TBaseObject }
@@ -1649,12 +1698,16 @@ begin
   end;
 end;
 
-class function  Console.GetWidth(): Integer;
+class procedure  Console.GetSize(AWidth: PInteger; AHeight: PInteger);
 var
   LConsoleInfo: TConsoleScreenBufferInfo;
 begin
   GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), LConsoleInfo);
-  Result := LConsoleInfo.dwSize.X;
+  if Assigned(AWidth) then
+    AWidth^ := LConsoleInfo.dwSize.X;
+
+  if Assigned(AHeight) then
+  AHeight^ := LConsoleInfo.dwSize.Y;
 end;
 
 class procedure Console.SetTitle(const ATitle: string);
@@ -1943,8 +1996,11 @@ var
   LText: string;
   LMaxCol: Integer;
   LChar: Char;
+  LWidth: Integer;
 begin
-  LMaxCol := GetWidth - AMargin;
+  GetSize(@LWidth, nil);
+  //LMaxCol := GetWidth - AMargin;
+  LMaxCol := LWidth - AMargin;
 
   LText := WrapTextEx(AText, LMaxCol);
 
@@ -4360,7 +4416,7 @@ begin
 end;
 
 { Audio }
-class function Audio.FindFreeSoundSlot: Integer;
+class function Audio.FindFreeSoundSlot(): Integer;
 var
   I: Integer;
 begin
@@ -4375,7 +4431,7 @@ begin
   end;
 end;
 
-class function Audio.FindFreeChannelSlot: Integer;
+class function Audio.FindFreeChannelSlot(): Integer;
 var
   I: Integer;
 begin
@@ -4398,18 +4454,18 @@ begin
   Result := True;
 end;
 
-class constructor Audio.Create;
+class constructor Audio.Create();
 begin
   inherited;
 end;
 
-class destructor Audio.Destroy;
+class destructor Audio.Destroy();
 begin
   Close;
   inherited;
 end;
 
-class function  Audio.Open: Boolean;
+class function  Audio.Open(): Boolean;
 begin
   Result := False;
   if Opened then Exit;
@@ -4423,21 +4479,21 @@ begin
   Result := Opened;
 end;
 
-class procedure Audio.Close;
+class procedure Audio.Close();
 begin
   if not Opened then Exit;
-  UnloadMusic;
-  UnloadAllSounds;
+  UnloadMusic();
+  UnloadAllSounds();
   ma_engine_uninit(@FEngine);
   InitData;
 end;
 
-class function Audio.Opened: Boolean;
+class function Audio.Opened(): Boolean;
 begin
   Result := FOpened;
 end;
 
-class procedure Audio.InitData;
+class procedure Audio.InitData();
 var
   I: Integer;
 begin
@@ -4453,7 +4509,7 @@ begin
   FPaused := False;
 end;
 
-class procedure Audio.Update;
+class procedure Audio.Update();
 var
   I: Integer;
 begin
@@ -4473,7 +4529,7 @@ begin
   end;
 end;
 
-class function  Audio.GetPause: Boolean;
+class function  Audio.GetPause(): Boolean;
 begin
   Result := FPaused;
 end;
@@ -4497,14 +4553,14 @@ begin
   end;
 end;
 
-class function  Audio.PlayMusic(const AInputStream: TIO; const AVolume: Single; const ALoop: Boolean; const APan: Single): Boolean;
+class function  Audio.PlayMusic(const AIO: TIO; const AVolume: Single; const ALoop: Boolean; const APan: Single): Boolean;
 begin
   Result := FAlse;
   if not Opened then Exit;
-  if not Assigned(AInputStream) then Exit;
+  if not Assigned(AIO) then Exit;
   UnloadMusic;
-  FVFS.IO := AInputStream;
-  if ma_sound_init_from_file(@FEngine, Utils.AsUtf8(AInputStream.Tag) , MA_SOUND_FLAG_STREAM, nil,
+  FVFS.IO := AIO;
+  if ma_sound_init_from_file(@FEngine, Utils.AsUtf8(AIO.Tag) , MA_SOUND_FLAG_STREAM, nil,
     nil, @FMusic.Handle) <> MA_SUCCESS then
   FVFS.IO := nil;
   ma_sound_start(@FMusic);
@@ -4514,7 +4570,27 @@ begin
   SetMusicPan(APan);
 end;
 
-class procedure Audio.UnloadMusic;
+class function  Audio.PlayMusicFromFile(const AFilename: string; const AVolume: Single; const ALoop: Boolean; const APan: Single): Boolean;
+var
+  LIO: TIO;
+begin
+  Result := False;
+  LIO := TFileIO.Open(AFilename, iomRead);
+  if not Assigned(LIO) then Exit;
+  Result := PlayMusic(LIO, AVolume, ALoop, APan);
+end;
+
+class function  Audio.PlayMusicFromZipFile(const AZipFile: TZipFile; const AFilename: string; const AVolume: Single; const ALoop: Boolean; const APan: Single): Boolean;
+var
+  LIO: TIO;
+begin
+  Result := False;
+  LIO := AZipFile.OpenFile(AFilename);
+  if not Assigned(LIO) then Exit;
+  Result := PlayMusic(LIO, AVolume, ALoop, APan);
+end;
+
+class procedure Audio.UnloadMusic();
 begin
   if not Opened then Exit;
   if not FMusic.Loaded then Exit;
@@ -4523,7 +4599,7 @@ begin
   FMusic.Loaded := False;
 end;
 
-class function  Audio.GetMusicLoop: Boolean;
+class function  Audio.GetMusicLoop(): Boolean;
 begin
   Result := False;
   if not Opened then Exit;
@@ -4536,7 +4612,7 @@ begin
   ma_sound_set_looping(@FMusic.Handle, Ord(ALoop))
 end;
 
-class function  Audio.GetMusicVolume: Single;
+class function  Audio.GetMusicVolume(): Single;
 begin
   Result := 0;
   if not Opened then Exit;
@@ -4550,7 +4626,7 @@ begin
   ma_sound_set_volume(@FMusic.Handle, Math.UnitToScalarValue(AVolume, 1));
 end;
 
-class function  Audio.GetMusicPan: Single;
+class function  Audio.GetMusicPan(): Single;
 begin
   Result := ma_sound_get_pan(@FMusic.Handle);
 end;
@@ -4560,7 +4636,7 @@ begin
   ma_sound_set_pan(@FMusic.Handle, EnsureRange(APan, -1, 1));
 end;
 
-class function  Audio.LoadSound(const AInputStream: TIO): Integer;
+class function  Audio.LoadSound(const AIO: TIO): Integer;
 var
   LResult: Integer;
 begin
@@ -4570,12 +4646,36 @@ begin
   LResult := FindFreeSoundSlot;
   if LResult = ERROR then Exit;
 
-  FVFS.IO := AInputStream;
-  if ma_sound_init_from_file(@FEngine, Utils.AsUtf8(AInputStream.Tag), 0, nil, nil,
+  FVFS.IO := AIO;
+  if ma_sound_init_from_file(@FEngine, Utils.AsUtf8(AIO.Tag), 0, nil, nil,
     @FSound[LResult].Handle) <> MA_SUCCESS then Exit;
   FVFS.IO := nil;
   FSound[LResult].InUse := True;
   Result := LResult;
+end;
+
+class function  Audio.LoadSoundFromFile(const AFilename: string): Integer;
+var
+  LIO: TIO;
+begin
+  Result := -1;
+  LIO := TFileIO.Open(AFilename, iomRead);
+  if not Assigned(LIO) then Exit;
+  try
+    Result := LoadSound(LIO);
+  finally
+    LIO.Free();
+  end;
+end;
+
+class function  Audio.LoadSoundFromZipFile(const AZipFile: TZipFile; const AFilename: string): Integer;
+var
+  LIO: TIO;
+begin
+  Result := -1;
+  LIO := AZipFile.OpenFile(AFilename);
+  if not Assigned(LIO) then Exit;
+  Result := LoadSound(LIO);
 end;
 
 class procedure Audio.UnloadSound(var aSound: Integer);
@@ -4588,26 +4688,32 @@ begin
   aSound := ERROR;
 end;
 
-class procedure Audio.UnloadAllSounds;
+class procedure Audio.UnloadAllSounds();
 var
   I: Integer;
 begin
   // close all channels
   for I := 0 to CHANNEL_COUNT-1 do
   begin
-    ma_sound_stop(@FChannel[I].Handle);
-    ma_sound_uninit(@FChannel[I].Handle);
+    if FChannel[I].InUse then
+    begin
+      ma_sound_stop(@FChannel[I].Handle);
+      ma_sound_uninit(@FChannel[I].Handle);
+    end;
   end;
 
   // close all sound buffers
   for I := 0 to SOUND_COUNT-1 do
   begin
-    ma_sound_uninit(@FSound[I].Handle);
+    if FSound[I].InUse then
+    begin
+      ma_sound_uninit(@FSound[I].Handle);
+    end;
   end;
+
 end;
 
-class function  Audio.PlaySound(const aSound, aChannel: Integer;
-  const AVolume: Single; const ALoop: Boolean): Integer;
+class function  Audio.PlaySound(const aSound, aChannel: Integer; const AVolume: Single; const ALoop: Boolean): Integer;
 var
   LResult: Integer;
 begin
@@ -4643,8 +4749,7 @@ begin
   Result := LResult;
 end;
 
-class procedure Audio.ReserveChannel(const aChannel: Integer;
-  const aReserve: Boolean);
+class procedure Audio.ReserveChannel(const aChannel: Integer; const aReserve: Boolean);
 begin
   if not FOpened then Exit;
   if FPaused then Exit;
@@ -4662,8 +4767,7 @@ begin
   FChannel[aChannel].InUse := False;
 end;
 
-class procedure Audio.SetChannelVolume(const aChannel: Integer;
-  const AVolume: Single);
+class procedure Audio.SetChannelVolume(const aChannel: Integer; const AVolume: Single);
 var
   LVolume: Single;
 begin
@@ -5012,6 +5116,8 @@ procedure TWindow.StartFrame();
 begin
   FrameLimitTimer.Start();
   Async.Process();
+  Audio.Update();
+  Video.Update();
 end;
 
 procedure TWindow.EndFrame();
@@ -6772,6 +6878,71 @@ end;
 class procedure Video.SetLooping(const ALoop: Boolean);
 begin
   FLoop := ALoop;
+end;
+
+{ TCamera }
+procedure TCamera.SetRotation(const AValue: Single);
+begin
+  FRotation := EnsureRange(AValue, 0, 360);
+end;
+
+constructor TCamera.Create();
+begin
+  inherited;
+  FScale := 1;
+end;
+
+destructor TCamera.Destroy();
+begin
+  inherited;
+end;
+
+procedure TCamera.Move(const X, Y: Single);
+begin
+  FX := FX + (X / FScale);
+  FY := FY + (Y / FScale);
+end;
+
+procedure TCamera.Zoom(const AScale: Single);
+begin
+  FScale := FScale + (AScale * FScale);
+end;
+
+procedure TCamera.Rotate(const ARotation: Single);
+begin
+  FRotation := FRotation + ARotation;
+end;
+
+procedure TCamera.Use(const AWindow: TWindow);
+var
+  LViewport: TRect;
+begin
+  if not Assigned(AWindow) then
+  begin
+    glPopMatrix();
+    FWindow := nil;
+    Exit;
+  end;
+
+  glPushMatrix();
+  AWindow.GetViewport(LViewport);
+
+  glTranslatef((LViewport.Width/2), (LViewport.Height/2), 0);
+  glRotatef(FRotation, 0, 0, 1);
+  glScalef(FScale, FScale, 1);
+  glTranslatef(-FX, -FY, 0);
+end;
+
+procedure TCamera.Reset();
+begin
+  if Assigned(FWindow) then
+  begin
+    glPopMatrix();
+  end;
+  FX := 0;
+  FY := 0;
+  FRotation := 0;
+  FScale := 1;
 end;
 
 
