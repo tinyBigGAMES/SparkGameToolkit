@@ -102,7 +102,7 @@ var
 begin
   if not InitLib() then Exit;
 
-  Speech.Say('Welcome to Spark Game Toolkit', True);
+  Speech.Say('Welcome to Spark Game Toolkit, the easy fast and fun twodee game development framework for Delphi', True);
 
   LDone := False;
   while not LDone do

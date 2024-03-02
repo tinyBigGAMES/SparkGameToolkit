@@ -1,69 +1,45 @@
+(* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+                         -****************+.
+               .-=++*+::*###############*-
+           :=+##*+=-::*##**############=
+        .=*#*=:    .+#*=+############+.
+       =##+.      +#+-=############*-:
+     :*#+.      =+-.=#############- =#*.
+    -##-      -=..+#############*:.  ---.
+   -##:     .: .+################= :+#*-:.
+  .##-        :==========*#####= :*#*- -#*
+  =##                   -####*:-*#*-   .##:
+  +#+                  -###*--*#*-      *#=
+  *#+                 +###==*#*:        *#=
+  +#*                *##+=*#*-          ##-
+  :##.             .*##*##*:           -##.
+   +#*            -#####*:             *#=
+    *#+          =####+:             .*#+
+     +#*.       +###+.              :##=
+      -##+.    *##+:              :+#*:
+        =*#+..*#+:             .-*#*-
+          :-:#+::.        .:-=*##+:
+           -+..+*###****####*+-.
+          :.      ..:::::..
+        ____                   _
+       / ___| _ __   __ _ _ __| | __
+       \___ \| '_ \ / _` | '__| |/ /
+        ___) | |_) | (_| | |  |   <
+       |____/| .__/ \__,_|_|  |_|\_\
+             |_|   Game Toolkit™
+
+Copyright © 2024-present tinyBigGAMES™ LLC
+         All Rights Reserved.
+
+Website: https://tinybiggames.com
+Email  : support@tinybiggames.com
+
+See LICENSE for license information
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *)
+
 unit SGT.SpeechLib;
 
-// ************************************************************************ //
-// WARNING                                                                    
-// -------                                                                    
-// The types declared in this file were generated from data read from a       
-// Type Library. If this type library is explicitly or indirectly (via        
-// another type library referring to this type library) re-imported, or the   
-// 'Refresh' command of the Type Library Editor activated while editing the   
-// Type Library, the contents of this file will be regenerated and all        
-// manual modifications will be lost.                                         
-// ************************************************************************ //
-
-// $Rev: 98336 $
-// File generated on 11/12/2023 10:47:45 PM from Type Library described below.
-
-// ************************************************************************  //
-// Type Lib: C:\Windows\System32\Speech\Common\sapi.dll (1)
-// LIBID: {C866CA3A-32F7-11D2-9602-00C04F8EE628}
-// LCID: 0
-// Helpfile: 
-// HelpString: Microsoft Speech Object Library
-// DepndLst: 
-//   (1) v2.0 stdole, (C:\Windows\SysWOW64\stdole2.tlb)
-// SYS_KIND: SYS_WIN32
-// Errors:
-//   Hint: Parameter 'Object' of ISpeechObjectToken.CreateInstance changed to 'Object_'
-//   Hint: Parameter 'Object' of ISpeechObjectToken.IsUISupported changed to 'Object_'
-//   Hint: Parameter 'Object' of ISpeechObjectToken.DisplayUI changed to 'Object_'
-//   Hint: Symbol 'Type' renamed to 'type_'
-//   Hint: Parameter 'Type' of ISpeechVoice.Skip changed to 'Type_'
-//   Hint: Parameter 'Type' of ISpeechRecognizer.GetFormat changed to 'Type_'
-//   Hint: Parameter 'Type' of ISpeechGrammarRuleState.AddWordTransition changed to 'Type_'
-//   Hint: Parameter 'Type' of ISpeechGrammarRuleState.AddSpecialTransition changed to 'Type_'
-//   Hint: Parameter 'Type' of ISpeechGrammarRuleStateTransition.Type changed to 'Type_'
-//   Hint: Parameter 'Property' of ISpeechPhraseProperties.Item changed to 'Property_'
-//   Error creating palette bitmap of (TSpNotifyTranslator) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpObjectTokenCategory) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpObjectToken) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpResourceManager) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpStreamFormatConverter) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpMMAudioEnum) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpMMAudioIn) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpMMAudioOut) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpStream) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpVoice) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpSharedRecoContext) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpInprocRecognizer) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpSharedRecognizer) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpLexicon) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpUnCompressedLexicon) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpCompressedLexicon) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpShortcut) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpPhoneConverter) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpPhoneticAlphabetConverter) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpNullPhoneConverter) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpTextSelectionInformation) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpPhraseInfoBuilder) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpAudioFormat) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpWaveFormatEx) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpInProcRecoContext) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpCustomStream) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpFileStream) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-//   Error creating palette bitmap of (TSpMemoryStream) : Server C:\Windows\System32\Speech\Common\sapi.dll contains no icons
-// ************************************************************************ //
-{$TYPEDADDRESS OFF} // Unit must be compiled without type-checked pointers. 
+{$TYPEDADDRESS OFF}
 {$WARN SYMBOL_PLATFORM OFF}
 {$WRITEABLECONST ON}
 {$VARPROPSETTER ON}
