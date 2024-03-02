@@ -54,6 +54,7 @@ uses
   System.SyncObjs,
   System.Math,
   System.Net.HttpClient,
+  System.JSON,
   System.Variants,
   System.Win.ComObj,
   System.IniFiles,
@@ -62,7 +63,8 @@ uses
   WinApi.ShellAPI,
   WinApi.ActiveX,
   SGT.Deps,
-  SGT.OGL;
+  SGT.OGL,
+  SGT.SpeechLib;
 
 const
   SGT_NAME          = 'Spark Game Toolkit™';
@@ -1265,6 +1267,156 @@ type
     procedure Rotate(const ARotation: Single);
     procedure Use(const AWindow: TWindow);
     procedure Reset();
+  end;
+
+  { TCloudDb }
+  TCloudDb = class(TBaseObject)
+  protected const
+    cURL = '/?apikey=%s&keyspace=%s&query=%s';
+  protected
+    FUrl: string;
+    FApiKey: string;
+    FDatabase: string;
+    FResponseText: string;
+    FLastError: string;
+    FHttp: THTTPClient;
+    FSQL: TStringList;
+    FPrepairedSQL: string;
+    FJSON: TJSONObject;
+    FDataset: TJSONArray;
+    FMacros: TDictionary<string, string>;
+    FParams: TDictionary<string, string>;
+    procedure SetMacroValue(const AName, AValue: string);
+    procedure SetParamValue(const AName, AValue: string);
+    procedure Prepair;
+    function  GetQueryURL(const ASQL: string): string;
+    function  GetPrepairedSQL: string;
+    function  GetResponseText: string;
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+    procedure Setup(const AURL, AApiKey, ADatabase: string);
+    procedure ClearSQLText();
+    procedure AddSQLText(const AText: string; const AArgs: array of const);
+    function  GetSQLText(): string;
+    procedure SetSQLText(const AText: string);
+    function  GetMacro(const AName: string): string;
+    procedure SetMacro(const AName, AValue: string);
+    function  GetParam(const AName: string): string;
+    procedure SetParam(const AName, AValue: string);
+    function  RecordCount(): Integer;
+    function  GetField(const AIndex: Cardinal; const AName: string): string;
+    function  Execute(): Boolean;
+    function  ExecuteSQL(const ASQL: string): Boolean;
+    function  GetLastError(): string;
+  end;
+
+  { Speech }
+  Speech = class
+  public type
+    VoiceAttributeEvent = (vaDescription, vaName, vaVendor, vaAge, vaGender, vaLanguage, vaId);
+    WordEvent = procedure(const AWord: string; const AText: string) of object;
+  protected class var
+    FSpVoice: TSpVoice;
+    FVoiceList: TInterfaceList;
+    FVoiceDescList: TStringList;
+    FPaused: Boolean;
+    FText: string;
+    FWord: string;
+    FVoice: Integer;
+    FSubList: TDictionary<string, string>;
+    FOnWord: WordEvent;
+    FVolume: Single;
+    class procedure DoOnWord(ASender: TObject; AStreamNumber: Integer; AStreamPosition: OleVariant; ACharacterPosition, ALength: Integer);
+    class procedure DoSpeak(AText: string; AFlags: Integer);
+    class procedure EnumVoices();
+    class procedure FreeVoices();
+  public
+    class constructor Create();
+    class destructor Destroy();
+  public
+    class property OnWord: WordEvent read FOnWord write FOnWord;
+    class function  GetVoiceCount(): Integer;
+    class function  GetVoiceAttribute(const AIndex: Integer; const AAttribute: VoiceAttributeEvent): string;
+    class procedure ChangeVoice(const AIndex: Integer);
+    class function  GetVoice(): Integer;
+    class procedure SetVolume(const AVolume: Single);
+    class function  GetVolume(): Single;
+    class procedure SetRate(const ARate: Single);
+    class function  GetRate(): Single;
+    class procedure Clear();
+    class procedure Say(const AText: string; const APurge: Boolean);
+    class procedure SayXML(const AText: string; const APurge: Boolean);
+    class function  Active(): Boolean;
+    class procedure Pause();
+    class procedure Resume();
+    class procedure Reset();
+    class procedure SubstituteWord(const AWord: string; const ASubstituteWord: string);
+  end;
+
+  { TPolygon }
+  TPolygon = class(TBaseObject)
+  protected type
+    TSegment = record
+      Point: TPoint;
+      Visible: Boolean;
+    end;
+  protected
+    FSegment: array of TSegment;
+    FWorldPoint: array of TPoint;
+    FItemCount: Integer;
+  public
+    constructor Create; override;
+    destructor Destroy; override;
+    procedure Save(const AFilename: string);
+    procedure Load(const AStream: TIO; const AFilename: string);
+    procedure CopyFrom(APolygon: TPolygon);
+    procedure Clear();
+    procedure AddLocalPoint(AX, AY: Single; AVisible: Boolean);
+    function  Transform(AX, AY, AScale, AAngle: Single; AOrigin: PPoint; AHFlip, AVFlip: Boolean): Boolean;
+    procedure Render(const AWindow: TWindow; const AX, AY, AScale, AAngle: Single; AThickness: Integer; AColor: TColor; AOrigin: PPoint; AHFlip, AVFlip: Boolean);
+    procedure SetSegmentVisible(AIndex: Integer; AVisible: Boolean);
+    function  IsSegmentVisible(AIndex: Integer): Boolean;
+    function  PointCount(): Integer;
+    function  WorldPoint(AIndex: Integer): PPoint;
+    function  LocalPoint(AIndex: Integer): PPoint;
+  end;
+
+  { TStarfield }
+  TStarfield = class(TBaseObject)
+  protected type
+    TStar = record
+      X, Y, Z: Single;
+      Speed: Single;
+    end;
+    TPoint = record
+      X,Y,Z: Single;
+    end;
+  protected
+    FCenter: TPoint;
+    FMin: TPoint;
+    FMax: TPoint;
+    FViewScaleRatio: Single;
+    FViewScale: Single;
+    FStarCount: Cardinal;
+    FStar: array of TStar;
+    FSpeed: TPoint;
+    FVirtualPos: TPoint;
+    procedure TransformDrawPoint(const X, Y, Z: Single; const AWindow: TWindow);
+    procedure Done();
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+  public
+    procedure Init(const AWindow: TWindow; const aStarCount: Cardinal; const AMinX, AMinY, AMinZ, AMaxX, AMaxY, AMaxZ, AViewScale: Single);
+    procedure SetVirtualPos(const X, Y: Single);
+    procedure GetVirtualPos(var X: Single; var Y: Single);
+    procedure SetXSpeed(const ASpeed: Single);
+    procedure SetYSpeed(const ASpeed: Single);
+    procedure SetZSpeed(const ASpeed: Single);
+    procedure Update();
+    procedure Render(const AWindow: TWindow);
+    class function New(const AWindow: TWindow): TStarfield;
   end;
 
 implementation
@@ -6961,6 +7113,825 @@ begin
   FY := 0;
   FRotation := 0;
   FScale := 1;
+end;
+
+{ TCloudDb }
+procedure TCloudDb.SetMacroValue(const AName, AValue: string);
+begin
+  FPrepairedSQL := FPrepairedSQL.Replace('&'+AName, AValue);
+end;
+
+procedure TCloudDb.SetParamValue(const AName, AValue: string);
+begin
+  FPrepairedSQL := FPrepairedSQL.Replace(':'+AName, ''''+AValue+'''');
+end;
+
+procedure TCloudDb.Prepair();
+var
+  LKey: string;
+begin
+  FPrepairedSQL := FSQL.Text;
+
+  // substitue macros
+  for LKey in FMacros.Keys do
+  begin
+    SetMacroValue(LKey, FMacros.Items[LKey]);
+  end;
+
+  // substitue field params
+  for LKey in FParams.Keys do
+  begin
+    SetParamValue(LKey, FParams.Items[LKey]);
+  end;
+end;
+
+constructor  TCloudDb.Create();
+begin
+  inherited;
+  FSQL := TStringList.Create;
+  FHttp := THTTPClient.Create;
+  FMacros := TDictionary<string, string>.Create;
+  FParams := TDictionary<string, string>.Create;
+end;
+
+destructor TCloudDb.Destroy();
+begin
+  if Assigned(FJson) then
+  begin
+    FJson.Free();
+    FJson := nil;
+  end;
+  FParams.Free();
+  FMacros.Free();
+  FHttp.Free();
+  FSQL.Free();
+  inherited;
+end;
+
+procedure TCloudDb.Setup(const AURL, AApiKey, ADatabase: string);
+begin
+  FUrl := AURL + cURL;
+  FApiKey := AApiKey;
+  FDatabase := ADatabase;
+end;
+
+procedure TCloudDb.ClearSQLText();
+begin
+  FSQL.Clear();
+end;
+
+procedure TCloudDb.AddSQLText(const AText: string;
+  const AArgs: array of const);
+begin
+  FSQL.Add(Format(AText, AArgs));
+end;
+
+function  TCloudDb.GetSQLText: string;
+begin
+  Result := FSQL.Text;
+end;
+
+procedure TCloudDb.SetSQLText(const AText: string);
+begin
+  FSQL.Text := AText;
+end;
+
+function  TCloudDb.GetMacro(const AName: string): string;
+begin
+  FMacros.TryGetValue(AName, Result);
+end;
+
+procedure TCloudDb.SetMacro(const AName, AValue: string);
+begin
+  FMacros.AddOrSetValue(AName, AValue);
+end;
+
+function  TCloudDb.GetParam(const AName: string): string;
+begin
+  FParams.TryGetValue(AName, Result);
+end;
+
+procedure TCloudDb.SetParam(const AName, AValue: string);
+begin
+  FParams.AddOrSetValue(AName, AValue);
+end;
+
+function  TCloudDb.RecordCount(): Integer;
+begin
+  Result := 0;
+  if not Assigned(FDataset) then Exit;
+  Result := FDataset.Count;
+end;
+
+function  TCloudDb.GetField(const AIndex: Cardinal;
+  const AName: string): string;
+begin
+  Result := '';
+  if not Assigned(FDataset) then Exit;
+  if AIndex > Cardinal(FDataset.Count-1) then Exit;
+  Result := FDataset.Items[AIndex].GetValue<string>(AName);
+end;
+
+function  TCloudDb.GetQueryURL(const ASQL: string): string;
+begin
+  Result := Format(FUrl, [FApiKey, FDatabase, ASQL]);
+end;
+
+function  TCloudDb.GetPrepairedSQL: string;
+begin
+  Result := FPrepairedSQL;
+end;
+
+function TCloudDb.Execute(): Boolean;
+begin
+  Prepair;
+  Result := ExecuteSQL(FPrepairedSQL);
+end;
+
+function  TCloudDb.ExecuteSQL(const ASQL: string): Boolean;
+var
+  LResponse: IHTTPResponse;
+begin
+  Result := False;
+  if ASQL.IsEmpty then Exit;
+  LResponse := FHttp.Get(GetQueryURL(ASQL));
+  FResponseText := LResponse.ContentAsString;
+  if Assigned(FJson) then
+  begin
+    if Assigned(FJSON) then
+    begin
+      FJson.Free();
+      FJson := nil;
+    end;
+
+    FDataset := nil;
+  end;
+  FJson := TJSONObject.ParseJSONValue(FResponseText) as TJSONObject;
+  FLastError := FJson.GetValue('response').Value;
+  Result := Boolean(FLastError.IsEmpty or SameText(FLastError, 'true'));
+  if FLastError.IsEmpty then
+  begin
+    if Assigned(FDataset) then
+    begin
+      FDataset.Free();
+      FDataset := nil;
+    end;
+    FJson.TryGetValue('response', FDataset);
+  end;
+  if not Assigned(FDataset) then
+  begin
+    FJson.Free();
+    FJson := nil;
+  end;
+end;
+
+function TCloudDb.GetLastError(): string;
+begin
+  Result := FLastError;
+end;
+
+function TCloudDb.GetResponseText(): string;
+begin
+  Result:= FResponseText;
+end;
+
+{  Speech }
+class procedure Speech.DoOnWord(ASender: TObject; AStreamNumber: Integer; AStreamPosition: OleVariant; ACharacterPosition, ALength: Integer);
+var
+  LWord: string;
+begin
+  if FText.IsEmpty then Exit;
+  LWord := FText.Substring(ACharacterPosition, ALength);
+  if not FSubList.TryGetValue(LWord, FWord) then
+    FWord := LWord;
+  if Assigned(FOnWord) then
+  begin
+    FOnWord(FWord, FText);
+  end;
+end;
+
+class procedure Speech.DoSpeak(AText: string; AFlags: Integer);
+begin
+  if FSpVoice = nil then Exit;
+  if AText.IsEmpty then Exit;
+  if FPaused then Resume;
+  FSpVoice.Speak(AText, AFlags);
+  FText := AText;
+end;
+
+class procedure Speech.EnumVoices;
+var
+  LI: Integer;
+  LSOToken: ISpeechObjectToken;
+  LSOTokens: ISpeechObjectTokens;
+begin
+  FVoiceList := TInterfaceList.Create;
+  FVoiceDescList := TStringList.Create;
+  LSOTokens := FSpVoice.GetVoices('', '');
+  for LI := 0 to LSOTokens.Count - 1 do
+  begin
+    LSOToken := LSOTokens.Item(LI);
+    FVoiceDescList.Add(LSOToken.GetDescription(0));
+    FVoiceList.Add(LSOToken);
+  end;
+end;
+
+class procedure Speech.FreeVoices;
+begin
+  FreeAndNil(FVoiceDescList);
+  FreeAndNil(FVoiceList);
+end;
+
+class constructor Speech.Create;
+begin
+  inherited;
+  FPaused := False;
+  FText := '';
+  FWord := '';
+  FVoice := 0;
+  FSpVoice := TSpVoice.Create(nil);
+  FSpVoice.EventInterests := SVEAllEvents;
+  EnumVoices;
+  //FSpVoice.OnStartStream := OnStartStream;
+  FSpVoice.OnWord := DoOnWord;
+  FSubList := TDictionary<string, string>.Create;
+  FVolume := 1;
+end;
+
+class destructor Speech.Destroy;
+begin
+  FreeAndNil(FSubList);
+  FreeVoices;
+  FSpVoice.OnWord := nil;
+  FSpVoice.Free;
+  inherited;
+end;
+
+class function Speech.GetVoiceCount: Integer;
+begin
+  Result := FVoiceList.Count;
+end;
+
+class function Speech.GetVoiceAttribute(const AIndex: Integer; const AAttribute: VoiceAttributeEvent): string;
+var
+  LSOToken: ISpeechObjectToken;
+
+  function GetAttr(const aItem: string): string;
+  begin
+    if aItem = 'Id' then
+      Result := LSOToken.Id
+    else
+      Result := LSOToken.GetAttribute(aItem);
+  end;
+
+begin
+  Result := '';
+  if (AIndex < 0) or (AIndex > FVoiceList.Count - 1) then
+    Exit;
+  LSOToken := ISpeechObjectToken(FVoiceList.Items[AIndex]);
+  case AAttribute of
+    vaDescription:
+      Result := FVoiceDescList[AIndex];
+    vaName:
+      Result := GetAttr('Name');
+    vaVendor:
+      Result := GetAttr('Vendor');
+    vaAge:
+      Result := GetAttr('Age');
+    vaGender:
+      Result := GetAttr('Gender');
+    vaLanguage:
+      Result := GetAttr('Language');
+    vaId:
+      Result := GetAttr('Id');
+  end;
+end;
+
+class procedure Speech.ChangeVoice(const AIndex: Integer);
+var
+  LSOToken: ISpeechObjectToken;
+begin
+  if (AIndex < 0) or (AIndex > FVoiceList.Count - 1) then Exit;
+  if AIndex = FVoice then Exit;
+  LSOToken := ISpeechObjectToken(FVoiceList.Items[AIndex]);
+  FSpVoice.Voice := LSOToken;
+  FVoice := AIndex;
+end;
+
+class function Speech.GetVoice: Integer;
+begin
+  Result := FVoice;
+end;
+
+class procedure Speech.SetVolume(const AVolume: Single);
+begin
+  if FSpVoice = nil then   Exit;
+  FVolume := EnsureRange(AVolume, 0, 1);
+  FSpVoice.Volume := Round(Math.UnitToScalarValue(FVolume, 100));
+end;
+
+class function Speech.GetVolume: Single;
+begin
+  Result := 0;
+  if FSpVoice = nil then Exit;
+  Result := FVolume;
+end;
+
+class procedure Speech.SetRate(const ARate: Single);
+var
+  LVolume: Integer;
+  LRate: Single;
+begin
+  if FSpVoice = nil then Exit;
+
+  LRate := EnsureRange(ARate, 0, 1);
+
+  LVolume := Round(20.0 * LRate) - 10;
+
+  if LVolume < -10 then
+    LVolume := -10
+  else if LVolume > 10 then
+    LVolume := 10;
+
+  FSpVoice.Rate := LVolume;
+end;
+
+class function Speech.GetRate: Single;
+begin
+  Result := 0;
+  if FSpVoice = nil then Exit;
+  Result := (FSpVoice.Rate + 10.0) / 20.0;
+end;
+
+class procedure Speech.Say(const AText: string; const APurge: Boolean);
+var
+  LFlag: Integer;
+  LText: string;
+begin
+  LFlag := SVSFlagsAsync;
+  LText := AText;
+  if APurge then
+    LFlag := LFlag or SVSFPurgeBeforeSpeak;
+  DoSpeak(LText, LFlag);
+end;
+
+class procedure Speech.SayXML(const AText: string; const APurge: Boolean);
+var
+  LFlag: Integer;
+  LText: string;
+begin
+  LFlag := SVSFlagsAsync or SVSFIsXML;
+  if APurge then
+    LFlag := LFlag or SVSFPurgeBeforeSpeak;
+  LText := AText;
+  DoSpeak(AText, LFlag);
+end;
+
+class procedure Speech.Clear();
+begin
+  if FSpVoice = nil then Exit;
+  if Active then
+  begin
+    FSpVoice.Skip('Sentence', MaxInt);
+    Say(' ', True);
+  end;
+  FText := '';
+end;
+
+class function Speech.Active(): Boolean;
+begin
+  Result := False;
+  if FSpVoice = nil then Exit;
+  Result := Boolean(FSpVoice.Status.RunningState <> SRSEDone);
+end;
+
+class procedure Speech.Pause();
+begin
+  if FSpVoice = nil then Exit;
+  FSpVoice.Pause;
+  FPaused := True;
+end;
+
+class procedure Speech.Resume();
+begin
+  if FSpVoice = nil then Exit;
+  FSpVoice.Resume;
+  FPaused := False;
+end;
+
+class procedure Speech.Reset();
+begin
+  Clear;
+  FreeAndNil(FSpVoice);
+  FPaused := False;
+  FText := '';
+  FWord := '';
+  FSpVoice := TSpVoice.Create(nil);
+  FSpVoice.EventInterests := SVEAllEvents;
+  EnumVoices;
+  //FSpVoice.OnStartStream := OnStartStream;
+  FSpVoice.OnWord := DoOnWord;
+end;
+
+class procedure Speech.SubstituteWord(const AWord: string; const ASubstituteWord: string);
+var
+  LWord: string;
+  LSubstituteWord: string;
+begin
+  LWord := AWord;
+  LSubstituteWord := ASubstituteWord;
+  if LWord.IsEmpty then Exit;
+  if LSubstituteWord.IsEmpty then Exit;
+  FSubList.TryAdd(LWord, LSubstituteWord);
+end;
+
+constructor TPolygon.Create();
+begin
+  inherited;
+end;
+
+destructor TPolygon.Destroy();
+begin
+  Clear();
+  inherited;
+end;
+
+procedure TPolygon.Save(const AFilename: string);
+var
+  LSize: Integer;
+  LStream: TIO;
+begin
+  LStream := TFileIO.Open(AFilename, iomWrite);
+  try
+    // FItemCount
+    LStream.Write(@FItemCount, SizeOf(FItemCount));
+
+    // FItem
+    LSize := SizeOf(FSegment[0]) * FItemCount;
+    LStream.Write(@FSegment[0], LSize);
+
+    // FWorldPoint
+    LSize := SizeOf(FWorldPoint[0]) * FItemCount;
+    LStream.Write(@FWorldPoint[0], LSize);
+
+  finally
+    LStream.Free();
+  end;
+end;
+
+procedure TPolygon.Load(const AStream: TIO; const AFilename: string);
+var
+  LSize: Integer;
+begin
+  if Assigned(AStream) then Exit;
+
+  Clear();
+
+  // FItemCount
+  AStream.Read(@FItemCount, SizeOf(FItemCount));
+
+  // FItem
+  SetLength(FSegment, FItemCount);
+  LSize := SizeOf(FSegment[0]) * FItemCount;
+  AStream.Read(@FSegment[0], LSize);
+
+  // FWorldPoint
+  SetLength(FWorldPoint, FItemCount);
+  LSize := SizeOf(FWorldPoint[0]) * FItemCount;
+  AStream.Read(@FWorldPoint[0], LSize);
+end;
+
+procedure TPolygon.CopyFrom(aPolygon: TPolygon);
+var
+  I: Integer;
+begin
+  Clear;
+  for I := 0 to FItemCount-1 do
+  begin
+    with FSegment[I] do
+    begin
+      AddLocalPoint(Round(Point.X), Round(Point.Y), Visible);
+    end;
+  end;
+end;
+
+procedure TPolygon.Clear();
+begin
+  FSegment := nil;
+  FWorldPoint := nil;
+  FItemCount := 0;
+end;
+
+procedure TPolygon.AddLocalPoint(AX, AY: Single; aVisible: Boolean);
+begin
+  Inc(FItemCount);
+  SetLength(FSegment, FItemCount);
+  SetLength(FWorldPoint, FItemCount);
+  FSegment[FItemCount-1].Point.X := aX;
+  FSegment[FItemCount-1].Point.Y := aY;
+  FSegment[FItemCount-1].Visible := aVisible;
+  FWorldPoint[FItemCount-1].X := 0;
+  FWorldPoint[FItemCount-1].Y := 0;
+end;
+
+function  TPolygon.Transform(AX, AY, AScale, AAngle: Single; AOrigin: PPoint; AHFlip, AVFlip: Boolean): Boolean;
+var
+  I: Integer;
+  P: TPoint;
+begin
+  Result := False;
+
+  if FItemCount < 2 then  Exit;
+
+  for I := 0 to FItemCount-1 do
+  begin
+    // get local coord
+    P.X := FSegment[I].Point.X;
+    P.Y := FSegment[I].Point.Y;
+
+    // move point to origin
+    if aOrigin <> nil then
+    begin
+      P.X := P.X - aOrigin.X;
+      P.Y := P.Y - aOrigin.Y;
+    end;
+
+    if aVFlip then
+      P.Y := -P.Y;
+
+    if aHFlip then
+      P.X := -P.X;
+
+    // scale
+    P.X := P.X * aScale;
+    P.Y := P.Y * aScale;
+
+    // rotate
+    Math.AngleRotatePos(aAngle, P.X, P.Y);
+
+    // convert to world
+    P.X := P.X + aX;
+    P.Y := P.Y + aY;
+
+    // set world point
+    FWorldPoint[I].X := P.X;
+    FWorldPoint[I].Y := P.Y;
+  end;
+
+  Result := True;
+end;
+
+procedure TPolygon.Render(const AWindow: TWindow; const AX, AY, AScale, AAngle: Single; AThickness: Integer; AColor: TColor; AOrigin: PPoint; AHFlip, AVFlip: Boolean);
+var
+  I: Integer;
+  X0,Y0,X1,Y1: Single;
+begin
+  if not Transform(aX, aY, aScale, aAngle, aOrigin, aHFlip,  aVFlip) then Exit;
+
+  // draw line segments
+  for I := 0 to FItemCount-2 do
+  begin
+    if FSegment[I].Visible then
+    begin
+      X0 := FWorldPoint[I].X;
+      Y0 := FWorldPoint[I].Y;
+      X1 := FWorldPoint[I+1].X;
+      Y1 := FWorldPoint[I+1].Y;
+      AWindow.DrawLine(X0, Y0, X1, Y1, AColor, AThickness);
+    end;
+  end;
+end;
+
+procedure TPolygon.SetSegmentVisible(AIndex: Integer; aVisible: Boolean);
+begin
+  FSegment[aIndex].Visible := True;
+end;
+
+function  TPolygon.IsSegmentVisible(AIndex: Integer): Boolean;
+begin
+  Result := FSegment[aIndex].Visible;
+end;
+
+function  TPolygon.PointCount(): Integer;
+begin
+  Result := FItemCount;
+end;
+
+function  TPolygon.WorldPoint(AIndex: Integer): PPoint;
+begin
+  Result := @FWorldPoint[aIndex];
+end;
+
+function  TPolygon.LocalPoint(AIndex: Integer): PPoint;
+begin
+  Result := @FSegment[aIndex].Point;
+end;
+
+{ TStarfield }
+procedure TStarfield.TransformDrawPoint(const X, Y, Z: Single; const AWindow: TWindow);
+var
+  LX, LY: Single;
+  LSW, LSH: Single;
+  LOOZ: Single;
+  LCV: Byte;
+  LColor: TColor;
+  LViewport: TRect;
+  LScale: SGT.Lib.TPoint;
+
+  function IsVisible(vx, vy, vw, vh: Single): Boolean;
+  begin
+    Result := False;
+    if ((vx - vw) < 0) then
+      Exit;
+    if (vx > (LViewport.Width - 1)) then
+      Exit;
+    if ((vy - vh) < 0) then
+      Exit;
+    if (vy > (LViewport.Height - 1)) then
+      Exit;
+    Result := True;
+  end;
+
+begin
+  AWindow.GetViewport(LViewport);
+  AWindow.GetScale(LScale);
+  FViewScaleRatio := LViewport.Width / LViewport.Height;
+  FCenter.X := (LViewport.Width / 2) + LViewport.X;
+  FCenter.Y := (LViewport.Height / 2) + LViewport.Y;
+
+  LOOZ := ((1.0 / Z) * FViewScale);
+  LX := (FCenter.X - LViewport.X) - (X * LOOZ) * FViewScaleRatio;
+  LY := (FCenter.Y - LViewport.Y) + (Y * LOOZ) * FViewScaleRatio;
+  LSW := (1.0 * LOOZ);
+  if LSW < 1 then LSW := 1;
+  LSH := (1.0 * LOOZ);
+  if LSH < 1 then LSH := 1;
+  LSW := LSW * LScale.x;
+  LSH := LSH * LScale.y;
+  if not IsVisible(LX, LY, LSW, LSH) then
+    Exit;
+  LCV := round(255.0 - (((1.0 / FMax.Z) / (1.0 / Z)) * 255.0));
+
+  LColor.Make(LCV, LCV, LCV, LCV);
+
+  LX := LX - FVirtualPos.X;
+  LY := LY - FVirtualPos.Y;
+
+  AWindow.DrawFilledRect(LX, LY, LSW, LSH, LColor, 0);
+end;
+
+procedure TStarfield.Done();
+begin
+  FStar := nil;
+end;
+
+constructor TStarfield.Create();
+begin
+  inherited;
+end;
+
+destructor TStarfield.Destroy();
+begin
+  Done;
+
+  inherited;
+end;
+procedure TStarfield.Init(const AWindow: TWindow; const aStarCount: Cardinal; const AMinX, AMinY, AMinZ, AMaxX, AMaxY, AMaxZ, AViewScale: Single);
+var
+  I: Integer;
+  LViewport: TRect;
+begin
+  Done;
+
+  FStarCount := aStarCount;
+  SetLength(FStar, FStarCount);
+
+  AWindow.GetViewport(LViewport);
+
+  FViewScale := aViewScale;
+  FViewScaleRatio := LViewport.Width / LViewport.Height;
+  FCenter.X := (LViewport.Width / 2) + LViewport.X;
+  FCenter.Y := (LViewport.Height / 2) + LViewport.Y;
+  FCenter.Z := 0;
+
+  FMin.X := aMinX;
+  FMin.Y := aMinY;
+  FMin.Z := aMinZ;
+  FMax.X := aMaxX;
+  FMax.Y := aMaxY;
+  FMax.Z := aMaxZ;
+
+  for I := 0 to FStarCount - 1 do
+  begin
+    FStar[I].X := Math.RandomRangef(FMin.X, FMax.X);
+    FStar[I].Y := Math.RandomRangef(FMin.Y, FMax.Y);
+    FStar[I].Z := Math.RandomRangef(FMin.Z, FMax.Z);
+  end;
+
+  SetXSpeed(0.0);
+  SetYSpeed(0.0);
+  SetZSpeed(-3);
+  SetVirtualPos(0, 0);
+end;
+
+procedure TStarfield.SetVirtualPos(const X, Y: Single);
+begin
+  FVirtualPos.X := X;
+  FVirtualPos.Y := Y;
+end;
+
+procedure TStarfield.GetVirtualPos(var X: Single; var Y: Single);
+begin
+  X := FVirtualPos.X;
+  Y := FVirtualPos.Y;
+end;
+
+procedure TStarfield.SetXSpeed(const ASpeed: Single);
+begin
+  FSpeed.X := aSpeed;
+end;
+
+procedure TStarfield.SetYSpeed(const ASpeed: Single);
+begin
+  FSpeed.Y := aSpeed;
+end;
+
+procedure TStarfield.SetZSpeed(const ASpeed: Single);
+begin
+  FSpeed.Z := aSpeed;
+end;
+
+procedure TStarfield.Update();
+var
+  I: Integer;
+
+  procedure SetRandomPos(aIndex: Integer);
+  begin
+    FStar[aIndex].X := Math.RandomRangef(FMin.X, FMax.X);
+    FStar[aIndex].Y := Math.RandomRangef(FMin.Y, FMax.Y);
+    FStar[aIndex].Z := Math.RandomRangef(FMin.Z, FMax.Z);
+  end;
+
+begin
+
+  for I := 0 to FStarCount - 1 do
+  begin
+    FStar[I].X := FStar[I].X + FSpeed.X;
+    FStar[I].Y := FStar[I].Y + FSpeed.Y;
+    FStar[I].Z := FStar[I].Z + FSpeed.Z;
+
+    if FStar[I].X < FMin.X then
+    begin
+      SetRandomPos(I);
+      FStar[I].X := FMax.X;
+    end;
+
+    if FStar[I].X > FMax.X then
+    begin
+      SetRandomPos(I);
+      FStar[I].X := FMin.X;
+    end;
+
+    if FStar[I].Y < FMin.Y then
+    begin
+      SetRandomPos(I);
+      FStar[I].Y := FMax.Y;
+    end;
+
+    if FStar[I].Y > FMax.Y then
+    begin
+      SetRandomPos(I);
+      FStar[I].Y := FMin.Y;
+    end;
+
+    if FStar[I].Z < FMin.Z then
+    begin
+      SetRandomPos(I);
+      FStar[I].Z := FMax.Z;
+    end;
+
+    if FStar[I].Z > FMax.Z then
+    begin
+      SetRandomPos(I);
+      FStar[I].Z := FMin.Z;
+    end;
+  end;
+end;
+
+procedure TStarfield.Render(const AWindow: TWindow);
+var
+  I: Integer;
+begin
+  for I := 0 to FStarCount - 1 do
+  begin
+    TransformDrawPoint(FStar[I].X, FStar[I].Y, FStar[I].Z, AWindow);
+  end;
+end;
+
+class function TStarfield.New(const AWindow: TWindow): TStarfield;
+begin
+  Result := TStarfield.Create();
+  Result.Init(AWindow, 250, -1000, -1000, 10, 1000, 1000, 1000, 120);
 end;
 
 

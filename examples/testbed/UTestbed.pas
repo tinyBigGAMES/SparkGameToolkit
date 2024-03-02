@@ -102,10 +102,14 @@ var
 begin
   if not InitLib() then Exit;
 
+  Speech.Say('Welcome to Spark Game Toolkit', True);
+
   LDone := False;
   while not LDone do
   begin
     Console.Clear();
+    Console.PrintLn(SGT_PROJECT, Console.DARKGREEN);
+    Console.PrintLn();
     Console.PrintLn('>>> MENU <<<');
     Console.PrintLn('1. Build ZipFile');
     Console.PrintLn('2. Window');

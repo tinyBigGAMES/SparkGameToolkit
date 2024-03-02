@@ -121,6 +121,7 @@
         <DCCReference Include="..\..\src\SGT.OGL.pas"/>
         <DCCReference Include="..\..\src\SGT.Lib.pas"/>
         <DCCReference Include="..\..\src\SGT.Game.pas"/>
+        <DCCReference Include="..\..\src\SGT.SpeechLib.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -170,9 +171,9 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\..\bin\Testbed.rsm" Configuration="Debug" Class="DebugSymbols">
+                <DeployFile LocalName="..\..\bin\Testbed.exe" Configuration="Release" Class="ProjectOutput">
                     <Platform Name="Win64">
-                        <RemoteName>Testbed.rsm</RemoteName>
+                        <RemoteName>Testbed.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

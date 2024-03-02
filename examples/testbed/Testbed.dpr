@@ -49,7 +49,8 @@ uses
   SGT.Deps in '..\..\src\SGT.Deps.pas',
   SGT.OGL in '..\..\src\SGT.OGL.pas',
   SGT.Lib in '..\..\src\SGT.Lib.pas',
-  SGT.Game in '..\..\src\SGT.Game.pas';
+  SGT.Game in '..\..\src\SGT.Game.pas',
+  SGT.SpeechLib in '..\..\src\SGT.SpeechLib.pas';
 
 begin
   try
