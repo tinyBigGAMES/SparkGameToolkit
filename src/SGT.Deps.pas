@@ -464,6 +464,7 @@ const
   MA_SOUND_SOURCE_CHANNEL_COUNT = $FFFFFFFF;
   IMGUI_HAS_DOCK = 1;
   ImDrawCallback_ResetRenderState = Pointer(-8);
+  C2_MAX_POLYGON_VERTS = 8;
 
 const
   ENET_PROTOCOL_MINIMUM_MTU = 576;
@@ -2786,6 +2787,16 @@ const
   NSVG_FLAGS_VISIBLE = 1;
 
 type
+  C2_TYPE = Integer;
+  PC2_TYPE = ^C2_TYPE;
+
+const
+  C2_TYPE_CIRCLE = 0;
+  C2_TYPE_AABB = 1;
+  C2_TYPE_CAPSULE = 2;
+  C2_TYPE_POLY = 3;
+
+type
   // Forward declarations
   PPUTF8Char = ^PUTF8Char;
   PPByte = ^PByte;
@@ -3192,6 +3203,20 @@ type
   PNSVGpath = ^NSVGpath;
   PNSVGshape = ^NSVGshape;
   PNSVGimage = ^NSVGimage;
+  Pc2v = ^c2v;
+  Pc2r = ^c2r;
+  Pc2m = ^c2m;
+  Pc2x = ^c2x;
+  Pc2h = ^c2h;
+  Pc2Circle = ^c2Circle;
+  Pc2AABB = ^c2AABB;
+  Pc2Capsule = ^c2Capsule;
+  Pc2Poly = ^c2Poly;
+  Pc2Ray = ^c2Ray;
+  Pc2Raycast = ^c2Raycast;
+  Pc2Manifold = ^c2Manifold;
+  Pc2GJKCache = ^c2GJKCache;
+  Pc2TOIResult = ^c2TOIResult;
 
   GLFWglproc = procedure(); cdecl;
 
@@ -8618,6 +8643,87 @@ type
 
   PNSVGrasterizer = Pointer;
   PPNSVGrasterizer = ^PNSVGrasterizer;
+
+  c2v = record
+    x: Single;
+    y: Single;
+  end;
+
+  c2r = record
+    c: Single;
+    s: Single;
+  end;
+
+  c2m = record
+    x: c2v;
+    y: c2v;
+  end;
+
+  c2x = record
+    p: c2v;
+    r: c2r;
+  end;
+
+  c2h = record
+    n: c2v;
+    d: Single;
+  end;
+
+  c2Circle = record
+    p: c2v;
+    r: Single;
+  end;
+
+  c2AABB = record
+    min: c2v;
+    max: c2v;
+  end;
+
+  c2Capsule = record
+    a: c2v;
+    b: c2v;
+    r: Single;
+  end;
+
+  c2Poly = record
+    count: Integer;
+    verts: array [0..7] of c2v;
+    norms: array [0..7] of c2v;
+  end;
+
+  c2Ray = record
+    p: c2v;
+    d: c2v;
+    t: Single;
+  end;
+
+  c2Raycast = record
+    t: Single;
+    n: c2v;
+  end;
+
+  c2Manifold = record
+    count: Integer;
+    depths: array [0..1] of Single;
+    contact_points: array [0..1] of c2v;
+    n: c2v;
+  end;
+
+  c2GJKCache = record
+    metric: Single;
+    count: Integer;
+    iA: array [0..2] of Integer;
+    iB: array [0..2] of Integer;
+    &div: Single;
+  end;
+
+  c2TOIResult = record
+    hit: Integer;
+    toi: Single;
+    n: c2v;
+    p: c2v;
+    iterations: Integer;
+  end;
 
 const
 
@@ -16973,6 +17079,105 @@ procedure nsvgRasterize(r: PNSVGrasterizer; image: PNSVGimage; tx: Single; ty: S
 
 procedure nsvgDeleteRasterizer(p1: PNSVGrasterizer); cdecl;
   external SGT_DLL name _PU + 'nsvgDeleteRasterizer';
+
+function c2CircletoCircle(A: c2Circle; B: c2Circle): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2CircletoCircle';
+
+function c2CircletoAABB(A: c2Circle; B: c2AABB): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2CircletoAABB';
+
+function c2CircletoCapsule(A: c2Circle; B: c2Capsule): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2CircletoCapsule';
+
+function c2AABBtoAABB(A: c2AABB; B: c2AABB): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2AABBtoAABB';
+
+function c2AABBtoCapsule(A: c2AABB; B: c2Capsule): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2AABBtoCapsule';
+
+function c2CapsuletoCapsule(A: c2Capsule; B: c2Capsule): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2CapsuletoCapsule';
+
+function c2CircletoPoly(A: c2Circle; const B: Pc2Poly; const bx: Pc2x): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2CircletoPoly';
+
+function c2AABBtoPoly(A: c2AABB; const B: Pc2Poly; const bx: Pc2x): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2AABBtoPoly';
+
+function c2CapsuletoPoly(A: c2Capsule; const B: Pc2Poly; const bx: Pc2x): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2CapsuletoPoly';
+
+function c2PolytoPoly(const A: Pc2Poly; const ax: Pc2x; const B: Pc2Poly; const bx: Pc2x): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2PolytoPoly';
+
+function c2RaytoCircle(A: c2Ray; B: c2Circle; &out: Pc2Raycast): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2RaytoCircle';
+
+function c2RaytoAABB(A: c2Ray; B: c2AABB; &out: Pc2Raycast): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2RaytoAABB';
+
+function c2RaytoCapsule(A: c2Ray; B: c2Capsule; &out: Pc2Raycast): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2RaytoCapsule';
+
+function c2RaytoPoly(A: c2Ray; const B: Pc2Poly; const bx_ptr: Pc2x; &out: Pc2Raycast): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2RaytoPoly';
+
+procedure c2CircletoCircleManifold(A: c2Circle; B: c2Circle; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2CircletoCircleManifold';
+
+procedure c2CircletoAABBManifold(A: c2Circle; B: c2AABB; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2CircletoAABBManifold';
+
+procedure c2CircletoCapsuleManifold(A: c2Circle; B: c2Capsule; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2CircletoCapsuleManifold';
+
+procedure c2AABBtoAABBManifold(A: c2AABB; B: c2AABB; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2AABBtoAABBManifold';
+
+procedure c2AABBtoCapsuleManifold(A: c2AABB; B: c2Capsule; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2AABBtoCapsuleManifold';
+
+procedure c2CapsuletoCapsuleManifold(A: c2Capsule; B: c2Capsule; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2CapsuletoCapsuleManifold';
+
+procedure c2CircletoPolyManifold(A: c2Circle; const B: Pc2Poly; const bx: Pc2x; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2CircletoPolyManifold';
+
+procedure c2AABBtoPolyManifold(A: c2AABB; const B: Pc2Poly; const bx: Pc2x; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2AABBtoPolyManifold';
+
+procedure c2CapsuletoPolyManifold(A: c2Capsule; const B: Pc2Poly; const bx: Pc2x; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2CapsuletoPolyManifold';
+
+procedure c2PolytoPolyManifold(const A: Pc2Poly; const ax: Pc2x; const B: Pc2Poly; const bx: Pc2x; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2PolytoPolyManifold';
+
+function c2GJK(const A: Pointer; typeA: C2_TYPE; const ax_ptr: Pc2x; const B: Pointer; typeB: C2_TYPE; const bx_ptr: Pc2x; outA: Pc2v; outB: Pc2v; use_radius: Integer; iterations: PInteger; cache: Pc2GJKCache): Single; cdecl;
+  external SGT_DLL name _PU + 'c2GJK';
+
+function c2TOI(const A: Pointer; typeA: C2_TYPE; const ax_ptr: Pc2x; vA: c2v; const B: Pointer; typeB: C2_TYPE; const bx_ptr: Pc2x; vB: c2v; use_radius: Integer): c2TOIResult; cdecl;
+  external SGT_DLL name _PU + 'c2TOI';
+
+procedure c2Inflate(shape: Pointer; &type: C2_TYPE; skin_factor: Single); cdecl;
+  external SGT_DLL name _PU + 'c2Inflate';
+
+function c2Hull(verts: Pc2v; count: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2Hull';
+
+procedure c2Norms(verts: Pc2v; norms: Pc2v; count: Integer); cdecl;
+  external SGT_DLL name _PU + 'c2Norms';
+
+procedure c2MakePoly(p: Pc2Poly); cdecl;
+  external SGT_DLL name _PU + 'c2MakePoly';
+
+function c2Collided(const A: Pointer; const ax: Pc2x; typeA: C2_TYPE; const B: Pointer; const bx: Pc2x; typeB: C2_TYPE): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2Collided';
+
+procedure c2Collide(const A: Pointer; const ax: Pc2x; typeA: C2_TYPE; const B: Pointer; const bx: Pc2x; typeB: C2_TYPE; m: Pc2Manifold); cdecl;
+  external SGT_DLL name _PU + 'c2Collide';
+
+function c2CastRay(A: c2Ray; const B: Pointer; const bx: Pc2x; typeB: C2_TYPE; &out: Pc2Raycast): Integer; cdecl;
+  external SGT_DLL name _PU + 'c2CastRay';
 
 implementation
 

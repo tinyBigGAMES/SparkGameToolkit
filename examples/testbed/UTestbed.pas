@@ -46,7 +46,11 @@ uses
   System.SysUtils,
   System.IOUtils,
   System.Math,
+  System.Classes,
+  System.AnsiStrings,
+  WinApi.Windows,
   SGT.Deps,
+  SGT.Deps.Ext,
   SGT.OGL,
   SGT.Lib;
 
@@ -70,6 +74,7 @@ type
     procedure TestFont();
     procedure TestTiledTexture();
     procedure TestCamera();
+    procedure TestDearImGui();
   end;
 
 procedure RunTests();
@@ -125,6 +130,7 @@ begin
     Console.PrintLn(' 8. Polygon');
     Console.PrintLn(' 9. Font');
     Console.PrintLn('10. Camera');
+    Console.PrintLn('11. Dear ImGui');
     Console.PrintLn(' Q. Quit');
     Console.PrintLn();
     Console.Print('Select: ');
@@ -159,6 +165,9 @@ begin
     else
     if LOption = '10' then
       TestCamera()
+    else
+    if LOption = '11' then
+      TestDearImGui()
     else
     if LOption = 'q' then
       LDone := True;
@@ -861,5 +870,106 @@ begin
   LFont.Free();
   LWindow.Free();
 end;
+
+procedure TTestbed_ContentScaledEvent(const ASender: Pointer; const AScaleX, AScaleY: Single; const AUserData: Pointer);
+var
+  LFontAtlas: PImFontAtlas;
+begin
+  LFontAtlas := AUserData;
+  ImFontAtlas_ResizeDefaultFont(LFontAtlas, 16*AScaleX);
+end;
+
+procedure TTestbed.TestDearImGui();
+var
+  LWindow: TWindow;
+  LFont: TFont;
+  LPos: TPoint;
+  io: PImGuiIO;
+  show_demo_window: Boolean;
+  clear_color: ImVec4;
+  color: TColor;
+  LScale: SGT.Lib.TPoint;
+
+  procedure ResizeFont();
+  begin
+    LWindow.GetScale(LScale);
+    ImFontAtlas_ResizeDefaultFont(io.Fonts, 16*LScale.x);
+  end;
+
+begin
+  show_demo_window := True;
+  clear_color.x := 0.45;
+  clear_color.y := 0.55;
+  clear_color.z := 0.60;
+  clear_color.w := 1.0;
+
+  LWindow := TWindow.Init('SGT: Dear ImGui');
+
+
+  igCreateContext(nil);
+  io := igGetIO();
+  io.ConfigFlags := ImGuiConfigFlags_NavEnableKeyboard or
+                      ImGuiConfigFlags_NavEnableGamepad or
+                      ImGuiConfigFlags_DockingEnable;
+
+  LWindow.SetContentScaledEvent(Self, TTestbed_ContentScaledEvent, io.Fonts);
+
+  ImGui_ImplGlfw_InitForOpenGL(LWindow.GetHandle(), true);
+  ImGui_ImplOpenGL2_Init();
+
+  ResizeFont();
+
+  LFont := TFont.LoadDefault(LWindow, 10);
+
+  while not LWindow.ShouldClose() do
+  begin
+    LWindow.StartFrame();
+
+      ImGui_ImplOpenGL2_NewFrame();
+      ImGui_ImplGlfw_NewFrame();
+      igNewFrame();
+
+      if show_demo_window then
+        igShowDemoWindow(@show_demo_window);
+
+      if igBegin('Hello, world!', nil, ImGuiWindowFlags_AlwaysAutoResize) then
+      begin
+        igText('This is some useful text.');
+        igCheckbox('Demo Window', @show_demo_window);
+        igEnd();
+      end;
+
+      if Lwindow.GetKey(KEY_ESCAPE, isWasPressed) then
+        LWindow.SetShouldClose(True);
+
+      LWindow.StartDrawing();
+
+      Color.Red := clear_color.x;
+      Color.Green := clear_color.y;
+      Color.Blue := clear_color.z;
+      Color.Alpha := clear_color.w;
+      LWindow.Clear(Color);
+
+      igRender();
+      ImGui_ImplOpenGL2_RenderDrawData(igGetDrawData());
+
+      LPos := Math.Point(3, 20);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+
+      LWindow.EndDrawing();
+
+    LWindow.EndFrame();
+  end;
+
+  ImGui_ImplOpenGL2_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  igDestroyContext(nil);
+
+  LFont.Free();
+  LWindow.Free();
+end;
+
+
 
 end.

@@ -1037,6 +1037,14 @@ type
 
   { TWindow }
   TWindow = class(TBaseObject)
+  public type
+    ContentScaledEvent = procedure(const ASender: Pointer; const AScaleX, AScaleY: Single; const AUserData: Pointer);
+  protected type
+    TOnContentScaledEvent = record
+      Sender: Pointer;
+      Handler: TWindow.ContentScaledEvent;
+      UserData: Pointer;
+    end;
   protected
     FHandle: PGLFWwindow;
     FSize: TSize;
@@ -1047,6 +1055,7 @@ type
     FMouseButtonState: array [0..0, MOUSE_BUTTON_1..MOUSE_BUTTON_MIDDLE] of Boolean;
     FGamepadButtonState: array[0..0, GAMEPAD_BUTTON_A..GAMEPAD_BUTTON_LAST] of Boolean;
     FVsync: Boolean;
+    FOnContentScaled: TOnContentScaledEvent;
   public const
     DEFAULT_WIDTH = 1920 div 2;
     DEFAULT_HEIGHT = 1080 div 2;
@@ -1102,6 +1111,8 @@ type
     function  GetPixel(const X, Y: Single): TColor;
     procedure SetPixel(const X, Y: Single; const AColor: TColor); overload;
     procedure SetPixel(const X, Y: Single; const ARed, AGreen, ABlue, AAlpha: Byte); overload;
+    procedure SetContentScaledEvent(const ASender: Pointer; const AHandler: TWindow.ContentScaledEvent; const AUserData: Pointer);
+    function  GetContextScaledEvent(): TWindow.ContentScaledEvent;
     class function Init(const aTitle: string; const AWidth: Integer=DEFAULT_WIDTH; const AHeight: Integer=DEFAULT_HEIGHT): TWindow;
   end;
 
@@ -1579,10 +1590,46 @@ implementation
 var
   LibInit: Boolean = False;
 
+function GLFWallocate(size: NativeUInt; user: Pointer): Pointer; cdecl;
+begin
+  GetMem(Result, size);
+end;
+
+function GLFWreallocate(block: Pointer; size: NativeUInt; user: Pointer): Pointer; cdecl;
+begin
+  ReallocMem(block, size);
+  Result := block;
+end;
+
+procedure GLFWdeallocate(block: Pointer; user: Pointer); cdecl;
+begin
+  FreeMem(block);
+end;
+
+function ImGuiMemAlloc(sz: NativeUInt; user_data: Pointer): Pointer; cdecl;
+begin
+  GetMem(Result, sz);
+end;
+
+procedure ImGuiMemFree(ptr: Pointer; user_data: Pointer); cdecl;
+begin
+  FreeMem(ptr);
+end;
+
 function InitLib(): Boolean;
+var
+  LAllocator: GLFWallocator;
 begin
   Result := False;
   if IsLibInit() then Exit;
+
+  LAllocator.allocate := GLFWallocate;
+  LAllocator.reallocate := GLFWreallocate;
+  LAllocator.deallocate := GLFWdeallocate;
+  LAllocator.user := nil;
+  glfwInitAllocator(@LAllocator);
+
+  //igSetAllocatorFunctions(ImGuiMemAlloc, ImGuiMemFree, nil);
 
   if glfwInit() <> GLFW_TRUE then Exit;
 
@@ -5214,6 +5261,11 @@ begin
   LWindow := glfwGetWindowUserPointer(AWindow);
   LWindow.FScale.x := AXScale;
   LWindow.FScale.y := AXScale;
+
+  if Assigned(LWindow.FOnContentScaled.Handler) then
+  begin
+    LWindow.FOnContentScaled.Handler(LWindow.FOnContentScaled.Sender, AXScale, AYScale, LWindow.FOnContentScaled.UserData);
+  end;
 end;
 
 constructor TWindow.Create();
@@ -5440,6 +5492,7 @@ begin
   Async.Process();
   Audio.Update();
   Video.Update();
+  glfwPollEvents();
 end;
 
 procedure TWindow.EndFrame();
@@ -5466,7 +5519,7 @@ begin
   if not IsOpen then Exit;
 
   glfwSwapBuffers(FHandle);
-  glfwPollEvents;
+  //glfwPollEvents;
 end;
 
 procedure TWindow.DrawLine(const X1, Y1, X2, Y2: Single; const AColor: TColor; const AThickness: Single);
@@ -5903,6 +5956,18 @@ begin
   LPixel[3] := AAlpha;
   glRasterPos2f(X, Y);
   glDrawPixels(1, 1, GL_RGBA, GL_UNSIGNED_BYTE, @LPixel);
+end;
+
+procedure TWindow.SetContentScaledEvent(const ASender: Pointer; const AHandler: TWindow.ContentScaledEvent; const AUserData: Pointer);
+begin
+  FOnContentScaled.Sender := ASender;
+  FOnContentScaled.Handler := AHandler;
+  FOnContentScaled.UserData := AUserData;
+end;
+
+function  TWindow.GetContextScaledEvent(): TWindow.ContentScaledEvent;
+begin
+  Result := FOnContentScaled.Handler;
 end;
 
 
