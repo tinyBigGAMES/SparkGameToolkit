@@ -1181,6 +1181,7 @@ type
     function   GetPixel(const X, Y: Single): TColor;
     procedure  SetPixel(const X, Y: Single; const AColor: TColor); overload;
     procedure  SetPixel(const X, Y: Single; const ARed, AGreen, ABlue, AAlpha: Byte); overload;
+    function   CollideAABB(const ATexture: TTexture): Boolean;
     function   CollideOBB(const ATexture: TTexture): Boolean;
     class function LoadFromFile(const AFilename: string; const AColorKey: PColor=nil): TTexture;
     class function LoadFromZipFile(const AZipFile: TZipFile; const AFilename: string; const AColorKey: PColor=nil): TTexture;
@@ -1467,7 +1468,7 @@ type
   { TEntity }
   TEntity = class(TBaseObject)
   public type
-    Overlap = (eoOBB);
+    Overlap = (eoAABB, eoOBB);
   protected
     FSprite: TSprite;
     FGroup: Integer;
@@ -1531,7 +1532,7 @@ type
     function  IsVisible(const AWindow: TWindow): Boolean;
     function  IsFullyVisible(const AWindow: TWindow): Boolean;
     function  Collide(const X, Y, aRadius, aShrinkFactor: Single): Boolean; overload;
-    function  Collide(const AEntity: TEntity; const AOverlap: TEntity.Overlap=eoOBB): Boolean; overload;
+    function  Collide(const AEntity: TEntity; const AOverlap: TEntity.Overlap=eoAABB): Boolean; overload;
     procedure Render();
     procedure RenderAt(const X, Y: Single);
     function  GetSprite(): TSprite;
@@ -6633,6 +6634,29 @@ begin
     ARed;
 end;
 
+function   TTexture.CollideAABB(const ATexture: TTexture): Boolean;
+var
+  boxA, boxB: c2AABB;
+
+  function _c2v(x, y: Single): c2v;
+  begin
+    result.x := x;
+    result.y := y;
+  end;
+
+begin
+  // Set up AABB for this texture
+  boxA.min := _c2V(FPos.X - (FAnchor.X * FRegion.Width * FScale), FPos.Y - (FAnchor.Y * FRegion.Height * FScale));
+  boxA.max := _c2V((FPos.X - (FAnchor.X * FRegion.Width * FScale)) + FRegion.Width * FScale, (FPos.Y - (FAnchor.Y * FRegion.Height * FScale)) + FRegion.Height * FScale);
+
+  // Set up AABB for the other texture
+  boxB.min := _c2V(ATexture.FPos.X - (ATexture.FAnchor.X * ATexture.FRegion.Width * ATexture.FScale), ATexture.FPos.Y - (ATexture.FAnchor.Y * ATexture.FRegion.Height * ATexture.FScale));
+  boxB.max := _c2V((ATexture.FPos.X - (ATexture.FAnchor.X * ATexture.FRegion.Width * ATexture.FScale)) + ATexture.FRegion.Width * ATexture.FScale, (ATexture.FPos.Y - (ATexture.FAnchor.Y * ATexture.FRegion.Height * ATexture.FScale)) + ATexture.FRegion.Height * ATexture.FScale);
+
+  // Check for collision and return result
+  Result := Boolean(c2AABBtoAABB(boxA, boxB));
+end;
+
 function TTexture.CollideOBB(const ATexture: TTexture): Boolean;
 var
   obbA, obbB: TlgOBB;
@@ -8798,6 +8822,7 @@ begin
   LTextureB.SetRegion(AEntity.FSprite.GetImageRegion(FFrame, FGroup));
 
   case AOverlap of
+    eoAABB: Result := LTextureA.CollideAABB(LTextureB);
     eoOBB : Result := LTextureA.CollideOBB(LTextureB);
   end;
 

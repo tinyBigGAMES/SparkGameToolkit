@@ -75,6 +75,8 @@ type
     procedure TestTiledTexture();
     procedure TestCamera();
     procedure TestDearImGui();
+    procedure TestTimer();
+    procedure TestEntity();
   end;
 
 procedure RunTests();
@@ -131,6 +133,8 @@ begin
     Console.PrintLn(' 9. Font');
     Console.PrintLn('10. Camera');
     Console.PrintLn('11. Dear ImGui');
+    Console.PrintLn('12. Timer');
+    Console.PrintLn('13. Entity');
     Console.PrintLn(' Q. Quit');
     Console.PrintLn();
     Console.Print('Select: ');
@@ -169,6 +173,12 @@ begin
     if LOption = '11' then
       TestDearImGui()
     else
+    if LOption = '12' then
+      TestTimer()
+    else
+    if LOption = '13' then
+      TestEntity()
+    else
     if LOption = 'q' then
       LDone := True;
   end;
@@ -206,11 +216,11 @@ begin
 
       LWindow.StartDrawing();
 
-      LWindow.Clear(DARKSLATEBROWN);
+        LWindow.Clear(DARKSLATEBROWN);
 
-      LPos := Math.Point(3, 3);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LPos := Math.Point(3, 3);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
 
       LWindow.EndDrawing();
 
@@ -254,13 +264,13 @@ begin
 
       LWindow.StartDrawing();
 
-      LWindow.Clear(DARKSLATEBROWN);
+        LWindow.Clear(DARKSLATEBROWN);
 
-      LTexture.Draw();
+        LTexture.Draw();
 
-      LPos := Math.Point(3, 3);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LPos := Math.Point(3, 3);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
 
       LWindow.EndDrawing();
 
@@ -366,15 +376,15 @@ begin
 
       LWindow.StartDrawing();
 
-      LWindow.Clear(DARKSLATEBROWN);
+        LWindow.Clear(DARKSLATEBROWN);
 
-      LPos := Math.Point(3, 3);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( '1-8', 'Play sound'), [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( '9', 'Stop sound on channel #1'), [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'UP/DOWN', 'Next/Prev song'), [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, YELLOW,haLeft, Utils.HudTextItem( 'Song', '%s'), [TPath.GetFileName(LSongFilename)]);
+        LPos := Math.Point(3, 3);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( '1-8', 'Play sound'), [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( '9', 'Stop sound on channel #1'), [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'UP/DOWN', 'Next/Prev song'), [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, YELLOW,haLeft, Utils.HudTextItem( 'Song', '%s'), [TPath.GetFileName(LSongFilename)]);
 
       LWindow.EndDrawing();
 
@@ -411,13 +421,13 @@ begin
 
       LWindow.StartDrawing();
 
-      LWindow.Clear(DARKSLATEBROWN);
+        LWindow.Clear(DARKSLATEBROWN);
 
-      Video.Draw(0, 0, 0.5);
+        Video.Draw(0, 0, 0.5);
 
-      LPos := Math.Point(3, 3);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LPos := Math.Point(3, 3);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
 
       LWindow.EndDrawing();
 
@@ -514,14 +524,14 @@ begin
 
       LWindow.Clear(BLACK);
 
-      LStarfield.Render(LWindow);
+        LStarfield.Render(LWindow);
 
-      LPos := Math.Point(3, 3);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( '1-7', 'Change starfield'), []);
+        LPos := Math.Point(3, 3);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( '1-7', 'Change starfield'), []);
 
-      LWindow.EndDrawing();
+        LWindow.EndDrawing();
 
     LWindow.EndFrame();
   end;
@@ -578,15 +588,15 @@ begin
 
       LWindow.StartDrawing();
 
-      LWindow.Clear(DARKSLATEBROWN);
+        LWindow.Clear(DARKSLATEBROWN);
 
-      LPolygon.Render(LWindow, LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT, LScale, LAngle, 2, YELLOW, nil, False, False);
+        LPolygon.Render(LWindow, LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT, LScale, LAngle, 2, YELLOW, nil, False, False);
 
-      LPos := Math.Point(3, 3);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'UP', 'Scale up'), []);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'DOWN', 'Scale down'), []);
+        LPos := Math.Point(3, 3);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'UP', 'Scale up'), []);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'DOWN', 'Scale down'), []);
 
       LWindow.EndDrawing();
 
@@ -621,15 +631,15 @@ begin
 
       LWindow.StartDrawing();
 
-      LWindow.Clear(DARKSLATEBROWN);
+        LWindow.Clear(DARKSLATEBROWN);
 
-      LFont[1].DrawText(LWindow, LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT, YELLOW, haCenter, ' en   zh      ja       ko        de   es   pt     fr      vi    id', []);
-      LFont[1].DrawText(LWindow, LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT+LFont[1].TextHeight()+3, DARKGREEN, haCenter, 'Hello|你好|こんにちは|안녕하세요|Hallo|Hola|Olá|Bonjour|Xin chào|Halo', []);
-      LFont[0].DrawText(LWindow, LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT-LFont[1].TextHeight()-10, GREENYELLOW, haCenter, 'these are truetype fonts', []);
+        LFont[1].DrawText(LWindow, LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT, YELLOW, haCenter, ' en   zh      ja       ko        de   es   pt     fr      vi    id', []);
+        LFont[1].DrawText(LWindow, LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT+LFont[1].TextHeight()+3, DARKGREEN, haCenter, 'Hello|你好|こんにちは|안녕하세요|Hallo|Hola|Olá|Bonjour|Xin chào|Halo', []);
+        LFont[0].DrawText(LWindow, LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT-LFont[1].TextHeight()-10, GREENYELLOW, haCenter, 'these are truetype fonts', []);
 
-      LPos := Math.Point(3, 3);
-      LFont[0].DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-      LFont[0].DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LPos := Math.Point(3, 3);
+        LFont[0].DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont[0].DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
 
       LWindow.EndDrawing();
 
@@ -698,16 +708,16 @@ begin
 
       LWindow.StartDrawing();
 
-      LWindow.Clear(BLACK);
+        LWindow.Clear(BLACK);
 
-      for I := 0 to 3 do
-      begin
-        FTexture[I].DrawTiled(LWindow, FTexPos[I].X, FTexPos[I].Y);
-      end;
+        for I := 0 to 3 do
+        begin
+          FTexture[I].DrawTiled(LWindow, FTexPos[I].X, FTexPos[I].Y);
+        end;
 
-      LPos := Math.Point(3, 3);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LPos := Math.Point(3, 3);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
 
       LWindow.EndDrawing();
 
@@ -841,25 +851,25 @@ begin
 
       LWindow.StartDrawing();
 
-      LWindow.Clear(BLACK);
+        LWindow.Clear(BLACK);
 
-      FCam.Use(LWindow);
-      DrawObjects();
-      FCam.Use(nil);
+        FCam.Use(LWindow);
+        DrawObjects();
+        FCam.Use(nil);
 
-      LPos := Math.Point(3, 3);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LPos := Math.Point(3, 3);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
 
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('Space', 'Spawn'), []);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('Left/Right', 'cam move left/right'), []);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('Up/Down', 'cam move up/down'), []);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('W/S', 'cam zoom up/down'), []);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('A/D', 'cam rotate up/down'), []);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('R', 'Reset'), []);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, YELLOW, haLeft, Utils.HudTextItem('Pos', '%03.2f/%03.2f', 20, ' '), [FCam.X, FCam.Y]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, YELLOW, haLeft, Utils.HudTextItem('Zoom', '%3.2f'), [FCam.Scale]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, YELLOW, haLeft, Utils.HudTextItem('Angle', '%3.2f'), [FCam.Rotation]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('Space', 'Spawn'), []);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('Left/Right', 'cam move left/right'), []);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('Up/Down', 'cam move up/down'), []);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('W/S', 'cam zoom up/down'), []);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('A/D', 'cam rotate up/down'), []);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem('R', 'Reset'), []);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, YELLOW, haLeft, Utils.HudTextItem('Pos', '%03.2f/%03.2f', 20, ' '), [FCam.X, FCam.Y]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, YELLOW, haLeft, Utils.HudTextItem('Zoom', '%3.2f'), [FCam.Scale]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, YELLOW, haLeft, Utils.HudTextItem('Angle', '%3.2f'), [FCam.Rotation]);
 
       LWindow.EndDrawing();
 
@@ -944,18 +954,18 @@ begin
 
       LWindow.StartDrawing();
 
-      Color.Red := clear_color.x;
-      Color.Green := clear_color.y;
-      Color.Blue := clear_color.z;
-      Color.Alpha := clear_color.w;
-      LWindow.Clear(Color);
+        Color.Red := clear_color.x;
+        Color.Green := clear_color.y;
+        Color.Blue := clear_color.z;
+        Color.Alpha := clear_color.w;
+        LWindow.Clear(Color);
 
-      igRender();
-      ImGui_ImplOpenGL2_RenderDrawData(igGetDrawData());
+        igRender();
+        ImGui_ImplOpenGL2_RenderDrawData(igGetDrawData());
 
-      LPos := Math.Point(3, 20);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
-      LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LPos := Math.Point(3, 20);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
 
       LWindow.EndDrawing();
 
@@ -970,6 +980,140 @@ begin
   LWindow.Free();
 end;
 
+procedure TTestbed.TestTimer();
+var
+  LWindow: TWindow;
+  LFont: TFont;
+  LPos: TPoint;
+  LTimer: TTimer;
+  LCount: Integer;
+begin
+  LWindow := TWindow.Init('SGT: Timer');
+
+  LFont := TFont.LoadDefault(LWindow, 10);
+
+  LTimer.InitFPS(8);
+  LCount := 0;
+
+  while not LWindow.ShouldClose() do
+  begin
+    LWindow.StartFrame();
+
+      if Lwindow.GetKey(KEY_ESCAPE, isWasPressed) then
+        LWindow.SetShouldClose(True);
+
+      if LTimer.Check() then
+      begin
+        Inc(LCount);
+        LCount := Math.ClipValue(LCount, 0, 3, True);
+      end;
+
+      LWindow.StartDrawing();
+
+        LWindow.Clear(DARKSLATEBROWN);
+
+        case LCount of
+          0: LWindow.DrawFilledRect(LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT, 50, 50, DARKSEAGREEN, 0);
+          1: LWindow.DrawFilledRect(LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT, 50, 50, FORESTGREEN, 0);
+          2: LWindow.DrawFilledRect(LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT, 50, 50, GREEN, 0);
+          3: LWindow.DrawFilledRect(LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT, 50, 50, DARKGREEN, 0);
+        end;
+
+        LPos := Math.Point(3, 3);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+
+      LWindow.EndDrawing();
+
+    LWindow.EndFrame();
+  end;
+
+  LFont.Free();
+  LWindow.Free();
+end;
+
+procedure TTestbed.TestEntity();
+var
+  LZipFile: TZipFile;
+  LWindow: TWindow;
+  LFont: TFont;
+  LPos: TPoint;
+  LSprite: TSprite;
+  LBoss: TEntity;
+  LPlayer: TEntity;
+  LCollide: Boolean;
+  LMousePos: TPoint;
+begin
+  LZipFile := TZipFile.Init(CZipFilename);
+
+  LWindow := TWindow.Init('SGT: Entity');
+
+  LFont := TFont.LoadDefault(LWindow, 10);
+
+  LSprite := TSprite.Create();
+  LSprite.LoadPageFromZipFile(LZipFile, 'res/sprites/boss.png', nil); // page #0
+  LSprite.AddGroup(); // group #0
+  LSprite.AddImageFromGrid(0, 0, 0, 0, 128, 128);
+  LSprite.AddImageFromGrid(0, 0, 1, 0, 128, 128);
+  LSprite.AddImageFromGrid(0, 0, 0, 1, 128, 128);
+
+  LSprite.LoadPageFromZipFile(LZipFile, 'res/sprites/ship.png', nil); // page #1
+  LSprite.AddGroup(); // group #1
+  LSprite.AddImageFromGrid(1, 1, 1, 0, 64, 64);
+  LSprite.AddImageFromGrid(1, 1, 2, 0, 64, 64);
+  LSprite.AddImageFromGrid(1, 1, 3, 0, 64, 64);
+
+  LBoss := TEntity.New(LSprite, 0);
+  LBoss.SetPosAbs(LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT);
+  LBoss.SetFrameSpeed(24);
+
+  LPlayer := TEntity.New(LSprite, 1);
+  LPlayer.SetPosAbs(0, 0);
+  LPlayer.SetFrameSpeed(24);
+
+  while not LWindow.ShouldClose() do
+  begin
+    LWindow.StartFrame();
+
+      LMousePos := LWindow.GetMousePos();
+
+      if Lwindow.GetKey(KEY_ESCAPE, isWasPressed) then
+        LWindow.SetShouldClose(True);
+
+      LBoss.NextFrame();
+
+      LPlayer.NextFrame();
+      LPlayer.ThrustToPos(40, 40, LMousePos.x, LMousePos.y, 128, 32, 1, 0.001);
+      LCollide := LPlayer.Collide(LBoss);
+
+      LWindow.StartDrawing();
+
+        LWindow.Clear(DARKSLATEBROWN);
+
+        LBoss.Render();
+        if LCollide then
+          LWindow.DrawFilledRect(LWindow.DEFAULT_CENTER_WIDTH, LWindow.DEFAULT_CENTER_HEIGHT-64, 64, 10, RED, 0);
+
+        LPlayer.Render();
+
+        LPos := Math.Point(3, 3);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, WHITE, haLeft, 'fps %d', [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LPos.X, LPos.Y, 0, GREEN, haLeft, Utils.HudTextItem( 'Quit', 'ESC'), [FrameLimitTimer.FrameRate()]);
+        LFont.DrawText(LWindow, LWindow.DEFAULT_CENTER_WIDTH, 150, YELLOW, haCenter, 'move blue ship over green ship', []);
+
+      LWindow.EndDrawing();
+
+    LWindow.EndFrame();
+  end;
+
+  LPlayer.Free();
+  LBoss.Free();
+  LSprite.Free();
+
+  LFont.Free();
+  LWindow.Free();
+  LZipFile.Free();
+end;
 
 
 end.
