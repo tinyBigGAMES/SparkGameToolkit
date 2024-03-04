@@ -410,7 +410,7 @@ begin
 
   Audio.Open();
 
-  Video.Play(TZipFileIO.Open(CZipFilename, 'res/videos/Spark2.mpg'), 0.8, True);
+  Video.Play(TZipFileIO.Open(CZipFilename, 'res/videos/SGT.mpg'), 0.8, True);
 
   while not LWindow.ShouldClose() do
   begin

@@ -74,5 +74,6 @@ modules/
 !bin/ZipArc.exe
 bin/Data.zip
 bin/imgui.ini
+docs/SGT.chw
 
 

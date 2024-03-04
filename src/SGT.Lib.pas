@@ -1,4 +1,4 @@
-(* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ï»¿(* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
                          -****************+.
                .-=++*+::*###############*-
            :=+##*+=-::*##**############=
@@ -26,9 +26,9 @@
        \___ \| '_ \ / _` | '__| |/ /
         ___) | |_) | (_| | |  |   <
        |____/| .__/ \__,_|_|  |_|\_\
-             |_|   Game Toolkit™
+             |_|   Game Toolkitâ„¢
 
-Copyright © 2024-present tinyBigGAMES™ LLC
+Copyright Â© 2024-present tinyBigGAMESâ„¢ LLC
          All Rights Reserved.
 
 Website: https://tinybiggames.com
@@ -67,8 +67,8 @@ uses
   SGT.SpeechLib;
 
 const
-  SGT_NAME          = 'Spark Game Toolkit™';
-  SGT_DEVELOPER     = 'tinyBigGAMES™ LLC';
+  SGT_NAME          = 'Spark Game Toolkitâ„¢';
+  SGT_DEVELOPER     = 'tinyBigGAMESâ„¢ LLC';
   SGT_CODENAME      = 'Ignite';
   SGT_MAJOR_VERSION = '0';
   SGT_MINOR_VERSION = '1';
@@ -1192,7 +1192,7 @@ type
   { TFont }
   TFont = class(TBaseObject)
   public const
-    DEFAULT_GLYPHS = ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~™©';
+    DEFAULT_GLYPHS = ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~â„¢Â©';
   protected type
     PGlyph = ^TGlyph;
     TGlyph = record
