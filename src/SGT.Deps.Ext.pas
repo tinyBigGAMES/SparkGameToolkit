@@ -1,4 +1,4 @@
-(* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ï»¿(* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
                          -****************+.
                .-=++*+::*###############*-
            :=+##*+=-::*##**############=
@@ -26,9 +26,9 @@
        \___ \| '_ \ / _` | '__| |/ /
         ___) | |_) | (_| | |  |   <
        |____/| .__/ \__,_|_|  |_|\_\
-             |_|   Game Toolkit™
+             |_|   Game Toolkitâ„¢
 
-Copyright © 2024-present tinyBigGAMES™ LLC
+Copyright Â© 2024-present tinyBigGAMESâ„¢ LLC
          All Rights Reserved.
 
 Website: https://tinybiggames.com
@@ -60,7 +60,7 @@ procedure ImFontAtlas_ResizeDefaultFont(self: PImFontAtlas; const ASize: Single)
 implementation
 
 uses
-  SGT.Lib;
+  SGT.Core;
 
 function ImFontAtlas_AddFontFromResTTF(self: PImFontAtlas; const AInstance: HINST; const AResName: string; size_pixels: Single; const glyph_ranges: PImWchar): PImFont;
 type

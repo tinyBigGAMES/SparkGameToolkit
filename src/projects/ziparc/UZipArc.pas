@@ -44,7 +44,7 @@ interface
 uses
   System.SysUtils,
   System.IOUtils,
-  SGT.Lib;
+  SGT.Core;
 
 type
   { TlgZipArc }

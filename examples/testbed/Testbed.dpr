@@ -43,15 +43,24 @@ program Testbed;
 
 {$R *.res}
 
+{$R *.dres}
+
 uses
   System.SysUtils,
   UTestbed in 'UTestbed.pas',
   SGT.Deps in '..\..\src\SGT.Deps.pas',
   SGT.OGL in '..\..\src\SGT.OGL.pas',
-  SGT.Lib in '..\..\src\SGT.Lib.pas',
+  SGT.Core in '..\..\src\SGT.Core.pas',
   SGT.Game in '..\..\src\SGT.Game.pas',
+  SGT.Deps.Ext in '..\..\src\SGT.Deps.Ext.pas',
+  SGT.TreeMenuForm in '..\..\src\SGT.TreeMenuForm.pas' {TreeMenuForm},
+  SGT.TreeMenu in '..\..\src\SGT.TreeMenu.pas',
+  SGT.StartupDialog in '..\..\src\SGT.StartupDialog.pas',
+  SGT.StartupDialogForm in '..\..\src\SGT.StartupDialogForm.pas' {StartupDialogForm},
+  SGT.ClaudeAI in '..\..\src\SGT.ClaudeAI.pas',
   SGT.SpeechLib in '..\..\src\SGT.SpeechLib.pas',
-  SGT.Deps.Ext in '..\..\src\SGT.Deps.Ext.pas';
+  SGT.Speech in '..\..\src\SGT.Speech.pas',
+  SGT.CloudDB in '..\..\src\SGT.CloudDB.pas';
 
 begin
   try

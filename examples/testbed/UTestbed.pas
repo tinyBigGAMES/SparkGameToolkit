@@ -48,11 +48,16 @@ uses
   System.Math,
   System.Classes,
   System.AnsiStrings,
+  Vcl.Themes,
+  Vcl.Styles,
   WinApi.Windows,
   SGT.Deps,
   SGT.Deps.Ext,
   SGT.OGL,
-  SGT.Lib;
+  SGT.Core,
+  SGT.StartupDialog,
+  SGT.TreeMenu,
+  SGT.ClaudeAI;
 
 type
 
@@ -64,19 +69,22 @@ type
     constructor Create(); override;
     destructor Destroy(); override;
     procedure Run(); override;
-    procedure TestZipFile();
-    procedure TestWindow();
-    procedure TestTexture();
-    procedure TestAudio();
-    procedure TestVideo();
-    procedure TestStarfield();
-    procedure TestPolygon();
-    procedure TestFont();
-    procedure TestTiledTexture();
-    procedure TestCamera();
-    procedure TestDearImGui();
-    procedure TestTimer();
-    procedure TestEntity();
+    procedure StartupDialogRun();
+    procedure StartupDialogMore();
+    procedure BuildZipFile();
+    procedure BasicWindow();
+    procedure RotatingTexture();
+    procedure MultiChannelAudio();
+    procedure LoopingVideo();
+    procedure Starfield();
+    procedure ScaledPolygon();
+    procedure UnicodeFont();
+    procedure TiledParallaxTexture();
+    procedure Camera();
+    procedure DearImGui();
+    procedure Timer();
+    procedure EntityCollision();
+    procedure ClaudeAIChat();
   end;
 
 procedure RunTests();
@@ -108,85 +116,200 @@ end;
 
 procedure TTestbed.Run();
 var
-  LOption: string;
-  LDone: Boolean;
+  LStartupDialog: TStartupDialog;
+  LState: TStartupDialog.State;
+  LZipFile: TZipFile;
 begin
+  // set custom style
+  TStyleManager.TrySetStyle('Aqua Light Slate');
+
   if not InitLib() then Exit;
 
-  Speech.Say('Welcome to Spark Game Toolkit, the easy fast and fun twodee game development framework for Delphi', True);
+  LZipFile := TZipFile.Init(CZipFilename);
 
-  LDone := False;
-  while not LDone do
-  begin
-    Console.Clear();
-    Console.PrintLn(SGT_PROJECT, Console.DARKGREEN);
-    Console.PrintLn();
-    Console.PrintLn('>>> MENU <<<');
-    Console.PrintLn(' 1. Build ZipFile');
-    Console.PrintLn(' 2. Window');
-    Console.PrintLn(' 3. Texture');
-    Console.PrintLn(' 4. Tiled Texture');
-    Console.PrintLn(' 5. Audio');
-    Console.PrintLn(' 6. Video');
-    Console.PrintLn(' 7. Starfield');
-    Console.PrintLn(' 8. Polygon');
-    Console.PrintLn(' 9. Font');
-    Console.PrintLn('10. Camera');
-    Console.PrintLn('11. Dear ImGui');
-    Console.PrintLn('12. Timer');
-    Console.PrintLn('13. Entity');
-    Console.PrintLn(' Q. Quit');
-    Console.PrintLn();
-    Console.Print('Select: ');
-    LOption := Console.ReadLnX(['q', 'Q', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], 2).ToLower;
-    if LOption.Length = 0 then continue;
-    if LOption = '1' then
-      TestZipFile()
-    else
-    if LOption = '2' then
-      TestWindow()
-    else
-    if LOption = '3' then
-      TestTexture()
-    else
-    if LOption = '4' then
-      TestTiledTexture()
-    else
-    if LOption = '5' then
-      TestAudio()
-    else
-    if LOption = '6' then
-      TestVideo()
-    else
-    if LOption = '7' then
-      TestStarfield()
-    else
-    if LOption = '8' then
-      TestPolygon()
-    else
-    if LOption = '9' then
-      TestFont()
-    else
-    if LOption = '10' then
-      TestCamera()
-    else
-    if LOption = '11' then
-      TestDearImGui()
-    else
-    if LOption = '12' then
-      TestTimer()
-    else
-    if LOption = '13' then
-      TestEntity()
-    else
-    if LOption = 'q' then
-      LDone := True;
+  //LSpeech.Say('Welcome to Spark Game Toolkit, the easy fast and fun twodee game development framework for Delphi', True);
+
+  LStartupDialog := TStartupDialog.Create();
+  try
+    LStartupDialog.SetCaption('Spark Game Toolkit: Testbed');
+    LStartupDialog.SetLogo(LZipFile, 'res/startupdialog/banner.png');
+    LStartupDialog.SetLogoClickUrl('https://github.com/tinyBigGAMES/SparkGameToolkit');
+    LStartupDialog.SetReadme(LZipFile, 'res/startupdialog/readme.rtf');
+    LStartupDialog.SetLicense(LZipFile, 'res/startupdialog/license.rtf');
+    LStartupDialog.SetReleaseInfo('v'+SGT_VERSION+' ('+SGT_CODENAME+')');
+
+    // process startupdialog
+    repeat
+      LState := LStartupDialog.Show();
+      case LState of
+        sdsMore: StartupDialogMore();
+        sdsRun : StartupDialogRun();
+        sdsQuit: ;
+      end;
+    until LState = sdsQuit;
+
+  finally
+    LStartupDialog.Free();
   end;
+
+  LZipFile.Free();
 
   QuitLib();
 end;
 
-procedure TTestbed.TestZipFile();
+procedure TTestbed.StartupDialogRun();
+type
+  TMenuItem = (
+    // audio
+    miAudio_MultiChannel,
+
+    // window
+    miWindow_Basic,
+    miWindow_Starfield,
+    miWindow_ScaledRotatedPolygon,
+
+    // texture
+    miTexture_Rotating,
+    miTexture_TiledParallax,
+
+    // entity
+    miEntity_Collision,
+
+    // gui
+    miGui_DearImGui,
+
+    // misc
+    miMisc_BuildZipFile,
+    miMisc_Camera,
+    miMisc_Timer,
+    miMisc_ClaudeAIChat,
+
+    // video
+    miVideo_Playback,
+
+    // font
+    miFont_Unicode,
+
+    miLast
+  );
+var
+  LTreeMenu: TTreeMenu;
+  LAudioMenu: Pointer;
+  LWindowMenu: Pointer;
+  LMiscMenu: Pointer;
+  LVideoMenu: Pointer;
+  LTextureMenu: Pointer;
+  LFontMenu: Pointer;
+  LGuiMenu: Pointer;
+  LEntityMenu: Pointer;
+  LSelItem: Integer;
+begin
+  LTreeMenu := TTreeMenu.Create();
+  try
+    LTreeMenu.SetTitle('Spark Game Toolkit: Examples');
+    //LTreeMenu.SetStatus('v'+LGT_VERSION+' ('+LGT_CODENAME+')');
+
+    // audio
+    LAudioMenu := LTreeMenu.AddItem(nil, 'Audio', TTreeMenu.NONE, True);
+      LTreeMenu.AddItem(LAudioMenu, 'Multichannel', Ord(miAudio_MultiChannel), True);
+    LTreeMenu.Sort(LAudioMenu);
+
+    // window
+    LWindowMenu := LTreeMenu.AddItem(nil, 'Window', TTreeMenu.NONE, True);
+      LTreeMenu.AddItem(LWindowMenu, 'Scaled/Rotated Polygon', Ord(miWindow_ScaledRotatedPolygon), True);
+      LTreeMenu.AddItem(LWindowMenu, 'Starfield', Ord(miWindow_Starfield), True);
+      LTreeMenu.AddItem(LWindowMenu, 'Basic', Ord(miWindow_Basic), True);
+    LTreeMenu.Sort(LWindowMenu);
+
+    // video
+    LVideoMenu := LTreeMenu.AddItem(nil, 'Video', TTreeMenu.NONE, True);
+      LTreeMenu.AddItem(LVideoMenu, 'Looping', Ord(miVideo_Playback), True);
+    LTreeMenu.Sort(LVideoMenu);
+
+    // texture
+    LTextureMenu := LTreeMenu.AddItem(nil, 'Texture', TTreeMenu.NONE, True);
+      LTreeMenu.AddItem(LTextureMenu, 'Tiled Parallax', Ord(miTexture_TiledParallax), True);
+      LTreeMenu.AddItem(LTextureMenu, 'Rotating', Ord(miTexture_Rotating), True);
+    LTreeMenu.Sort(LTextureMenu);
+
+    // entity
+    LEntityMenu := LTreeMenu.AddItem(nil, 'Entity', TTreeMenu.NONE, True);
+      LTreeMenu.AddItem(LEntityMenu, 'Collision', Ord(miEntity_Collision), True);
+    LTreeMenu.Sort(LEntityMenu);
+
+
+    // font
+    LFontMenu := LTreeMenu.AddItem(nil, 'Font', TTreeMenu.NONE, True);
+      LTreeMenu.AddItem(LFontMenu, 'Unicode', Ord(miFont_Unicode), True);
+    LTreeMenu.Sort(LFontMenu);
+
+    // gui
+    LGuiMenu := LTreeMenu.AddItem(nil, 'GUI', TTreeMenu.NONE, True);
+      LTreeMenu.AddItem(LGuiMenu, 'Dear ImGui', Ord(miGui_DearImGui), True);
+    LTreeMenu.Sort(LGuiMenu);
+
+    // sort whole menu
+    LTreeMenu.Sort(nil);
+
+    // misc
+    LMiscMenu := LTreeMenu.AddItem(nil, 'Misc', TTreeMenu.NONE, True);
+      LTreeMenu.AddItem(LMiscMenu, 'Build ZipFile', Ord(miMisc_BuildZipFile), True);
+      LTreeMenu.AddItem(LMiscMenu, 'Camera', Ord(miMisc_Camera), True);
+      LTreeMenu.AddItem(LMiscMenu, 'Timer', Ord(miMisc_Timer), True);
+      LTreeMenu.AddItem(LMiscMenu, 'ClaudeAI Chat', Ord(miMisc_ClaudeAIChat), True);
+    LTreeMenu.Sort(LMiscMenu);
+
+    // menu loop
+    LSelItem := -1;
+    while true do
+    begin
+      LSelItem := LTreeMenu.Show(LSelItem);
+      if (LSelItem = TTreeMenu.QUIT) then
+        Break;
+
+      case TMenuItem(LSelItem) of
+        // misc
+        miMisc_BuildZipFile: BuildZipFile();
+        miMisc_Camera: Camera();
+        miMisc_Timer: Timer();
+        miMisc_ClaudeAIChat: ClaudeAIChat();
+
+        // audio
+        miAudio_MultiChannel: MultiChannelAudio();
+
+        // video
+        miVideo_Playback: LoopingVideo();
+
+        // texture
+        miTexture_TiledParallax: TiledParallaxTexture();
+        miTexture_Rotating: RotatingTexture();
+
+        // entity
+        miEntity_Collision: EntityCollision();
+
+        // font
+        miFont_Unicode: UnicodeFont();
+
+        // gui
+        miGui_DearImGui: DearImGui();
+
+        // window
+        miWindow_Basic: BasicWindow();
+        miWindow_ScaledRotatedPolygon: ScaledPolygon();
+        miWindow_Starfield: Starfield();
+      end;
+    end;
+  finally
+    LTreeMenu.Free();
+  end;
+end;
+
+procedure TTestbed.StartupDialogMore();
+begin
+  MessageBox(0, 'You can process additional custom dialog operations here', 'StartupDialog MORE', MB_OK);
+end;
+
+procedure TTestbed.BuildZipFile();
 begin
   Console.PrintLn(Console.CRLF+'Build zip file "%s"...', [CZipFilename]);
   if TZipFile.Build('Data.zip', 'res', nil, nil) then
@@ -197,13 +320,13 @@ begin
   Console.Pause();
 end;
 
-procedure TTestbed.TestWindow();
+procedure TTestbed.BasicWindow();
 var
   LWindow: TWindow;
   LFont: TFont;
   LPos: TPoint;
 begin
-  LWindow := TWindow.Init('SGT: Window');
+  LWindow := TWindow.Init('SGT: Basic Window');
 
   LFont := TFont.LoadDefault(LWindow, 10);
 
@@ -231,7 +354,7 @@ begin
   LWindow.Free();
 end;
 
-procedure TTestbed.TestTexture();
+procedure TTestbed.RotatingTexture();
 var
   LZipFile: TZipFile;
   LWindow: TWindow;
@@ -242,7 +365,7 @@ var
 begin
   LZipFile := TZipFile.Init(CZipFilename);
 
-  LWindow := TWindow.Init('SGT: Texture');
+  LWindow := TWindow.Init('SGT: Rotating Texture');
 
   LFont := TFont.LoadDefault(LWindow, 10);
 
@@ -283,7 +406,7 @@ begin
   LZipFile.Free();
 end;
 
-procedure TTestbed.TestAudio();
+procedure TTestbed.MultiChannelAudio();
 var
   LZipFile: TZipFile;
   LWindow: TWindow;
@@ -304,7 +427,7 @@ var
 begin
   LZipFile := TZipFile.Init(CZipFilename);
 
-  LWindow := TWindow.Init('SGT: Audio');
+  LWindow := TWindow.Init('SGT: MultiChannel Audio');
 
   LFont := TFont.LoadDefault(LWindow, 10);
 
@@ -398,13 +521,13 @@ begin
   LZipFile.Free();
 end;
 
-procedure TTestbed.TestVideo();
+procedure TTestbed.LoopingVideo();
 var
   LWindow: TWindow;
   LFont: TFont;
   LPos: TPoint;
 begin
-  LWindow := TWindow.Init('SGT: Video');
+  LWindow := TWindow.Init('SGT: Looping Video');
 
   LFont := TFont.LoadDefault(LWindow, 10);
 
@@ -441,7 +564,7 @@ begin
   LWindow.Free();
 end;
 
-procedure TTestbed.TestStarfield();
+procedure TTestbed.Starfield();
 var
   LWindow: TWindow;
   LFont: TFont;
@@ -541,7 +664,7 @@ begin
   LWindow.Free();
 end;
 
-procedure TTestbed.TestPolygon();
+procedure TTestbed.ScaledPolygon();
 var
   LWindow: TWindow;
   LFont: TFont;
@@ -550,7 +673,7 @@ var
   LAngle: Single;
   LScale: Single;
 begin
-  LWindow := TWindow.Init('SGT: Polygon');
+  LWindow := TWindow.Init('SGT: Scaled Polygon');
 
   LFont := TFont.LoadDefault(LWindow, 10);
 
@@ -608,7 +731,7 @@ begin
   LWindow.Free();
 end;
 
-procedure TTestbed.TestFont();
+procedure TTestbed.UnicodeFont();
 var
   LZipFile: TZipFile;
   LWindow: TWindow;
@@ -617,7 +740,7 @@ var
 begin
   LZipFile := TZipFile.Init(CZipFilename);
 
-  LWindow := TWindow.Init('SGT: Font');
+  LWindow := TWindow.Init('SGT: Unicode Font');
 
   LFont[0] := TFont.LoadDefault(LWindow, 10);
   LFont[1] := TFont.LoadFromZipFile(LWindow, LZipFile, 'res/fonts/unifont.ttf', 16, '你好こんにちは안녕하세요');
@@ -652,7 +775,7 @@ begin
   LZipFile.Free();
 end;
 
-procedure TTestbed.TestTiledTexture();
+procedure TTestbed.TiledParallaxTexture();
 var
   LZipFile: TZipFile;
   LWindow: TWindow;
@@ -665,7 +788,7 @@ var
 begin
   LZipFile := TZipFile.Init(CZipFilename);
 
-  LWindow := TWindow.Init('SGT: Tiled Texture');
+  LWindow := TWindow.Init('SGT: Tiled Parallex Texture');
 
   LFont := TFont.LoadDefault(LWindow, 10);
 
@@ -733,7 +856,7 @@ begin
   LZipFile.Free();
 end;
 
-procedure TTestbed.TestCamera();
+procedure TTestbed.Camera();
 type
   TObj = record
     X, Y, Size: Single;
@@ -889,7 +1012,7 @@ begin
   ImFontAtlas_ResizeDefaultFont(LFontAtlas, 16*AScaleX);
 end;
 
-procedure TTestbed.TestDearImGui();
+procedure TTestbed.DearImGui();
 var
   LWindow: TWindow;
   LFont: TFont;
@@ -898,7 +1021,7 @@ var
   show_demo_window: Boolean;
   clear_color: ImVec4;
   color: TColor;
-  LScale: SGT.Lib.TPoint;
+  LScale: SGT.Core.TPoint;
 
   procedure ResizeFont();
   begin
@@ -980,7 +1103,7 @@ begin
   LWindow.Free();
 end;
 
-procedure TTestbed.TestTimer();
+procedure TTestbed.Timer();
 var
   LWindow: TWindow;
   LFont: TFont;
@@ -1032,7 +1155,7 @@ begin
   LWindow.Free();
 end;
 
-procedure TTestbed.TestEntity();
+procedure TTestbed.EntityCollision();
 var
   LZipFile: TZipFile;
   LWindow: TWindow;
@@ -1046,7 +1169,7 @@ var
 begin
   LZipFile := TZipFile.Init(CZipFilename);
 
-  LWindow := TWindow.Init('SGT: Entity');
+  LWindow := TWindow.Init('SGT: Entity Collision');
 
   LFont := TFont.LoadDefault(LWindow, 10);
 
@@ -1113,6 +1236,18 @@ begin
   LFont.Free();
   LWindow.Free();
   LZipFile.Free();
+end;
+
+procedure TTestbed.ClaudeAIChat();
+var
+  LClaudeAI: TClaudeAI;
+begin
+  LClaudeAI := TClaudeAI.Create();
+  try
+    LClaudeAI.SimpleChat();
+  finally
+    LClaudeAI.Free();
+  end;
 end;
 
 

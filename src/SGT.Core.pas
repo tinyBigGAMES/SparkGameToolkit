@@ -37,7 +37,7 @@ Email  : support@tinybiggames.com
 See LICENSE for license information
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *)
 
-unit SGT.Lib;
+unit SGT.Core;
 
 {$I SGT.Defines.inc}
 
@@ -62,9 +62,9 @@ uses
   WinApi.Messages,
   WinApi.ShellAPI,
   WinApi.ActiveX,
+  WinApi.MMSystem,
   SGT.Deps,
-  SGT.OGL,
-  SGT.SpeechLib;
+  SGT.OGL;
 
 const
   SGT_NAME          = 'Spark Game Toolkit™';
@@ -91,9 +91,6 @@ type
 
   { TVAlign }
   TVAlign = (vaTop, vaCenter, vaBottom);
-
-  { TStartupDialogState }
-  TStartupDialogState = (sdsMore = 0, sdsRun = 1, sdsQuit = 2);
 
   { TBaseObject }
   TBaseObject = class
@@ -150,6 +147,7 @@ type
     class function  GetModuleVersionFullStr(AFilename: string): string; overload;
     class function  HttpGet(const aURL: string; const aStatus: PString=nil): string;
     class function  RemoveQuotes(const AText: string): string;
+    class function  GetEnvVarValue(const AVarName: string): string;
   end;
 
   { Console }
@@ -194,7 +192,7 @@ type
     class procedure Pause(aColor: DWORD=Console.WHITE; const aMsg: string=''; const AForcePause: Boolean=False);
     class procedure ClearKeyboardBuffer();
     class function  ReadKey(): Char;
-    class function  ReadLnX(const AAllowedChars: TSysCharSet; AMaxLength: Integer): string;
+    class function  ReadLnX(const AAllowedChars: TSysCharSet; AMaxLength: Integer; const AColor:DWORD=Console.WHITE): string;
     class function  WrapTextEx(const ALine: string; AMaxCol: Integer; const ABreakChars: TSysCharSet=[' ', '-', ',', ':', #9]): string;
     class procedure Print(const AMsg: string; const AArgs: array of const; const AColor: DWORD=Console.WHITE); overload;
     class procedure Print(const AMsg: string; const AColor: DWORD=Console.WHITE); overload;
@@ -202,7 +200,7 @@ type
     class procedure PrintLn(const AMsg: string; const AColor: DWORD=Console.WHITE); overload;
     class procedure PrintLn(); overload;
     class procedure Print(); overload;
-    class procedure Teletype(const AText: string; const AColor: DWORD; const AMargin: Integer; const AMinDelay: Integer; const AMaxDelay: Integer; const ABreakKey: Byte);
+    class procedure Teletype(const AText: string; const AColor: DWORD=Console.WHITE; const AMargin: Integer=10; const AMinDelay: Integer=0; const AMaxDelay: Integer=3; const ABreakKey: Byte=VK_ESCAPE);
   end;
 
   { FrameLimitTimer }
@@ -1279,91 +1277,6 @@ type
     procedure Reset();
   end;
 
-  { TCloudDb }
-  TCloudDb = class(TBaseObject)
-  protected const
-    cURL = '/?apikey=%s&keyspace=%s&query=%s';
-  protected
-    FUrl: string;
-    FApiKey: string;
-    FDatabase: string;
-    FResponseText: string;
-    FLastError: string;
-    FHttp: THTTPClient;
-    FSQL: TStringList;
-    FPrepairedSQL: string;
-    FJSON: TJSONObject;
-    FDataset: TJSONArray;
-    FMacros: TDictionary<string, string>;
-    FParams: TDictionary<string, string>;
-    procedure SetMacroValue(const AName, AValue: string);
-    procedure SetParamValue(const AName, AValue: string);
-    procedure Prepair;
-    function  GetQueryURL(const ASQL: string): string;
-    function  GetPrepairedSQL: string;
-    function  GetResponseText: string;
-  public
-    constructor Create(); override;
-    destructor Destroy(); override;
-    procedure Setup(const AURL, AApiKey, ADatabase: string);
-    procedure ClearSQLText();
-    procedure AddSQLText(const AText: string; const AArgs: array of const);
-    function  GetSQLText(): string;
-    procedure SetSQLText(const AText: string);
-    function  GetMacro(const AName: string): string;
-    procedure SetMacro(const AName, AValue: string);
-    function  GetParam(const AName: string): string;
-    procedure SetParam(const AName, AValue: string);
-    function  RecordCount(): Integer;
-    function  GetField(const AIndex: Cardinal; const AName: string): string;
-    function  Execute(): Boolean;
-    function  ExecuteSQL(const ASQL: string): Boolean;
-    function  GetLastError(): string;
-  end;
-
-  { Speech }
-  Speech = class
-  public type
-    VoiceAttributeEvent = (vaDescription, vaName, vaVendor, vaAge, vaGender, vaLanguage, vaId);
-    WordEvent = procedure(const AWord: string; const AText: string) of object;
-  protected class var
-    FSpVoice: TSpVoice;
-    FVoiceList: TInterfaceList;
-    FVoiceDescList: TStringList;
-    FPaused: Boolean;
-    FText: string;
-    FWord: string;
-    FVoice: Integer;
-    FSubList: TDictionary<string, string>;
-    FOnWord: WordEvent;
-    FVolume: Single;
-    class procedure DoOnWord(ASender: TObject; AStreamNumber: Integer; AStreamPosition: OleVariant; ACharacterPosition, ALength: Integer);
-    class procedure DoSpeak(AText: string; AFlags: Integer);
-    class procedure EnumVoices();
-    class procedure FreeVoices();
-  public
-    class constructor Create();
-    class destructor Destroy();
-  public
-    class property OnWord: WordEvent read FOnWord write FOnWord;
-    class function  GetVoiceCount(): Integer;
-    class function  GetVoiceAttribute(const AIndex: Integer; const AAttribute: VoiceAttributeEvent): string;
-    class procedure ChangeVoice(const AIndex: Integer);
-    class function  GetVoice(): Integer;
-    class procedure SetVolume(const AVolume: Single);
-    class function  GetVolume(): Single;
-    class procedure SetRate(const ARate: Single);
-    class function  GetRate(): Single;
-    class procedure Clear();
-    class procedure Say(const AText: string; const APurge: Boolean);
-    class procedure SayXML(const AText: string; const APurge: Boolean);
-    class function  Active(): Boolean;
-    class procedure Pause();
-    class procedure Resume();
-    class procedure Reset();
-    class procedure SubstituteWord(const AWord: string; const ASubstituteWord: string);
-  end;
-
   { TPolygon }
   TPolygon = class(TBaseObject)
   protected type
@@ -1585,7 +1498,7 @@ type
 
 implementation
 
-{$R SGT.Lib.res}
+{$R SGT.Core.res}
 
 { Init }
 var
@@ -1969,6 +1882,20 @@ begin
   Result := AnsiDequotedStr(S, '''');
 end;
 
+class function Utils.GetEnvVarValue(const AVarName: string): string;
+var
+  LBufSize: Integer;
+begin
+  LBufSize := GetEnvironmentVariable(PChar(AVarName), nil, 0);
+  if LBufSize > 0 then
+    begin
+      SetLength(Result, LBufSize - 1);
+      GetEnvironmentVariable(PChar(AVarName), PChar(Result), LBufSize);
+    end
+  else
+    Result := '';
+end;
+
 { Console }
 class constructor Console.Create();
 begin
@@ -2226,10 +2153,16 @@ class procedure Console.ClearKeyboardBuffer();
 var
   LInputRecord: TInputRecord;
   LEventsRead: DWORD;
+  LMsg: TMsg;
 begin
   while PeekConsoleInput(GetStdHandle(STD_INPUT_HANDLE), LInputRecord, 1, LEventsRead) and (LEventsRead > 0) do
   begin
     ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), LInputRecord, 1, LEventsRead);
+  end;
+
+  while PeekMessage(LMsg, 0, WM_KEYFIRST, WM_KEYLAST, PM_REMOVE) do
+  begin
+    // No operation; just removing messages from the queue
   end;
 end;
 
@@ -2244,7 +2177,7 @@ begin
   Result := LInputRecord.Event.KeyEvent.UnicodeChar;
 end;
 
-class function  Console.ReadLnX(const AAllowedChars: TSysCharSet; AMaxLength: Integer): string;
+class function  Console.ReadLnX(const AAllowedChars: TSysCharSet; AMaxLength: Integer; const AColor: DWORD): string;
 var
   LInputChar: Char;
 begin
@@ -2257,11 +2190,14 @@ begin
     begin
       if Length(Result) < AMaxLength then
       begin
-        Print(LInputChar);
-        Result := Result + LInputChar;
+        if not CharInSet(LInputChar, [#10, #0, #13, #8])  then
+        begin
+          Print(LInputChar, AColor);
+          Result := Result + LInputChar;
+        end;
       end;
-    end
-    else if LInputChar = #8 then
+    end;
+    if LInputChar = #8 then
     begin
       if Length(Result) > 0 then
       begin
@@ -2379,7 +2315,9 @@ begin
     Print(LChar, [], AColor);
     if not Math.RandomBool then
       LDelay := RandomRange(AMinDelay, AMaxDelay);
+    timeBeginPeriod(0);
     Sleep(LDelay);
+    timeBeginPeriod(0);
     if IsKeyPressed(ABreakKey) then
     begin
       ClearKeyboardBuffer;
@@ -7356,436 +7294,7 @@ begin
   FScale := 1;
 end;
 
-{ TCloudDb }
-procedure TCloudDb.SetMacroValue(const AName, AValue: string);
-begin
-  FPrepairedSQL := FPrepairedSQL.Replace('&'+AName, AValue);
-end;
-
-procedure TCloudDb.SetParamValue(const AName, AValue: string);
-begin
-  FPrepairedSQL := FPrepairedSQL.Replace(':'+AName, ''''+AValue+'''');
-end;
-
-procedure TCloudDb.Prepair();
-var
-  LKey: string;
-begin
-  FPrepairedSQL := FSQL.Text;
-
-  // substitue macros
-  for LKey in FMacros.Keys do
-  begin
-    SetMacroValue(LKey, FMacros.Items[LKey]);
-  end;
-
-  // substitue field params
-  for LKey in FParams.Keys do
-  begin
-    SetParamValue(LKey, FParams.Items[LKey]);
-  end;
-end;
-
-constructor  TCloudDb.Create();
-begin
-  inherited;
-  FSQL := TStringList.Create;
-  FHttp := THTTPClient.Create;
-  FMacros := TDictionary<string, string>.Create;
-  FParams := TDictionary<string, string>.Create;
-end;
-
-destructor TCloudDb.Destroy();
-begin
-  if Assigned(FJson) then
-  begin
-    FJson.Free();
-    FJson := nil;
-  end;
-  FParams.Free();
-  FMacros.Free();
-  FHttp.Free();
-  FSQL.Free();
-  inherited;
-end;
-
-procedure TCloudDb.Setup(const AURL, AApiKey, ADatabase: string);
-begin
-  FUrl := AURL + cURL;
-  FApiKey := AApiKey;
-  FDatabase := ADatabase;
-end;
-
-procedure TCloudDb.ClearSQLText();
-begin
-  FSQL.Clear();
-end;
-
-procedure TCloudDb.AddSQLText(const AText: string;
-  const AArgs: array of const);
-begin
-  FSQL.Add(Format(AText, AArgs));
-end;
-
-function  TCloudDb.GetSQLText: string;
-begin
-  Result := FSQL.Text;
-end;
-
-procedure TCloudDb.SetSQLText(const AText: string);
-begin
-  FSQL.Text := AText;
-end;
-
-function  TCloudDb.GetMacro(const AName: string): string;
-begin
-  FMacros.TryGetValue(AName, Result);
-end;
-
-procedure TCloudDb.SetMacro(const AName, AValue: string);
-begin
-  FMacros.AddOrSetValue(AName, AValue);
-end;
-
-function  TCloudDb.GetParam(const AName: string): string;
-begin
-  FParams.TryGetValue(AName, Result);
-end;
-
-procedure TCloudDb.SetParam(const AName, AValue: string);
-begin
-  FParams.AddOrSetValue(AName, AValue);
-end;
-
-function  TCloudDb.RecordCount(): Integer;
-begin
-  Result := 0;
-  if not Assigned(FDataset) then Exit;
-  Result := FDataset.Count;
-end;
-
-function  TCloudDb.GetField(const AIndex: Cardinal;
-  const AName: string): string;
-begin
-  Result := '';
-  if not Assigned(FDataset) then Exit;
-  if AIndex > Cardinal(FDataset.Count-1) then Exit;
-  Result := FDataset.Items[AIndex].GetValue<string>(AName);
-end;
-
-function  TCloudDb.GetQueryURL(const ASQL: string): string;
-begin
-  Result := Format(FUrl, [FApiKey, FDatabase, ASQL]);
-end;
-
-function  TCloudDb.GetPrepairedSQL: string;
-begin
-  Result := FPrepairedSQL;
-end;
-
-function TCloudDb.Execute(): Boolean;
-begin
-  Prepair;
-  Result := ExecuteSQL(FPrepairedSQL);
-end;
-
-function  TCloudDb.ExecuteSQL(const ASQL: string): Boolean;
-var
-  LResponse: IHTTPResponse;
-begin
-  Result := False;
-  if ASQL.IsEmpty then Exit;
-  LResponse := FHttp.Get(GetQueryURL(ASQL));
-  FResponseText := LResponse.ContentAsString;
-  if Assigned(FJson) then
-  begin
-    if Assigned(FJSON) then
-    begin
-      FJson.Free();
-      FJson := nil;
-    end;
-
-    FDataset := nil;
-  end;
-  FJson := TJSONObject.ParseJSONValue(FResponseText) as TJSONObject;
-  FLastError := FJson.GetValue('response').Value;
-  Result := Boolean(FLastError.IsEmpty or SameText(FLastError, 'true'));
-  if FLastError.IsEmpty then
-  begin
-    if Assigned(FDataset) then
-    begin
-      FDataset.Free();
-      FDataset := nil;
-    end;
-    FJson.TryGetValue('response', FDataset);
-  end;
-  if not Assigned(FDataset) then
-  begin
-    FJson.Free();
-    FJson := nil;
-  end;
-end;
-
-function TCloudDb.GetLastError(): string;
-begin
-  Result := FLastError;
-end;
-
-function TCloudDb.GetResponseText(): string;
-begin
-  Result:= FResponseText;
-end;
-
-{  Speech }
-class procedure Speech.DoOnWord(ASender: TObject; AStreamNumber: Integer; AStreamPosition: OleVariant; ACharacterPosition, ALength: Integer);
-var
-  LWord: string;
-begin
-  if FText.IsEmpty then Exit;
-  LWord := FText.Substring(ACharacterPosition, ALength);
-  if not FSubList.TryGetValue(LWord, FWord) then
-    FWord := LWord;
-  if Assigned(FOnWord) then
-  begin
-    FOnWord(FWord, FText);
-  end;
-end;
-
-class procedure Speech.DoSpeak(AText: string; AFlags: Integer);
-begin
-  if FSpVoice = nil then Exit;
-  if AText.IsEmpty then Exit;
-  if FPaused then Resume;
-  FSpVoice.Speak(AText, AFlags);
-  FText := AText;
-end;
-
-class procedure Speech.EnumVoices;
-var
-  LI: Integer;
-  LSOToken: ISpeechObjectToken;
-  LSOTokens: ISpeechObjectTokens;
-begin
-  FVoiceList := TInterfaceList.Create;
-  FVoiceDescList := TStringList.Create;
-  LSOTokens := FSpVoice.GetVoices('', '');
-  for LI := 0 to LSOTokens.Count - 1 do
-  begin
-    LSOToken := LSOTokens.Item(LI);
-    FVoiceDescList.Add(LSOToken.GetDescription(0));
-    FVoiceList.Add(LSOToken);
-  end;
-end;
-
-class procedure Speech.FreeVoices;
-begin
-  FreeAndNil(FVoiceDescList);
-  FreeAndNil(FVoiceList);
-end;
-
-class constructor Speech.Create;
-begin
-  inherited;
-  FPaused := False;
-  FText := '';
-  FWord := '';
-  FVoice := 0;
-  FSpVoice := TSpVoice.Create(nil);
-  FSpVoice.EventInterests := SVEAllEvents;
-  EnumVoices;
-  //FSpVoice.OnStartStream := OnStartStream;
-  FSpVoice.OnWord := DoOnWord;
-  FSubList := TDictionary<string, string>.Create;
-  FVolume := 1;
-end;
-
-class destructor Speech.Destroy;
-begin
-  FreeAndNil(FSubList);
-  FreeVoices;
-  FSpVoice.OnWord := nil;
-  FSpVoice.Free;
-  inherited;
-end;
-
-class function Speech.GetVoiceCount: Integer;
-begin
-  Result := FVoiceList.Count;
-end;
-
-class function Speech.GetVoiceAttribute(const AIndex: Integer; const AAttribute: VoiceAttributeEvent): string;
-var
-  LSOToken: ISpeechObjectToken;
-
-  function GetAttr(const aItem: string): string;
-  begin
-    if aItem = 'Id' then
-      Result := LSOToken.Id
-    else
-      Result := LSOToken.GetAttribute(aItem);
-  end;
-
-begin
-  Result := '';
-  if (AIndex < 0) or (AIndex > FVoiceList.Count - 1) then
-    Exit;
-  LSOToken := ISpeechObjectToken(FVoiceList.Items[AIndex]);
-  case AAttribute of
-    vaDescription:
-      Result := FVoiceDescList[AIndex];
-    vaName:
-      Result := GetAttr('Name');
-    vaVendor:
-      Result := GetAttr('Vendor');
-    vaAge:
-      Result := GetAttr('Age');
-    vaGender:
-      Result := GetAttr('Gender');
-    vaLanguage:
-      Result := GetAttr('Language');
-    vaId:
-      Result := GetAttr('Id');
-  end;
-end;
-
-class procedure Speech.ChangeVoice(const AIndex: Integer);
-var
-  LSOToken: ISpeechObjectToken;
-begin
-  if (AIndex < 0) or (AIndex > FVoiceList.Count - 1) then Exit;
-  if AIndex = FVoice then Exit;
-  LSOToken := ISpeechObjectToken(FVoiceList.Items[AIndex]);
-  FSpVoice.Voice := LSOToken;
-  FVoice := AIndex;
-end;
-
-class function Speech.GetVoice: Integer;
-begin
-  Result := FVoice;
-end;
-
-class procedure Speech.SetVolume(const AVolume: Single);
-begin
-  if FSpVoice = nil then   Exit;
-  FVolume := EnsureRange(AVolume, 0, 1);
-  FSpVoice.Volume := Round(Math.UnitToScalarValue(FVolume, 100));
-end;
-
-class function Speech.GetVolume: Single;
-begin
-  Result := 0;
-  if FSpVoice = nil then Exit;
-  Result := FVolume;
-end;
-
-class procedure Speech.SetRate(const ARate: Single);
-var
-  LVolume: Integer;
-  LRate: Single;
-begin
-  if FSpVoice = nil then Exit;
-
-  LRate := EnsureRange(ARate, 0, 1);
-
-  LVolume := Round(20.0 * LRate) - 10;
-
-  if LVolume < -10 then
-    LVolume := -10
-  else if LVolume > 10 then
-    LVolume := 10;
-
-  FSpVoice.Rate := LVolume;
-end;
-
-class function Speech.GetRate: Single;
-begin
-  Result := 0;
-  if FSpVoice = nil then Exit;
-  Result := (FSpVoice.Rate + 10.0) / 20.0;
-end;
-
-class procedure Speech.Say(const AText: string; const APurge: Boolean);
-var
-  LFlag: Integer;
-  LText: string;
-begin
-  LFlag := SVSFlagsAsync;
-  LText := AText;
-  if APurge then
-    LFlag := LFlag or SVSFPurgeBeforeSpeak;
-  DoSpeak(LText, LFlag);
-end;
-
-class procedure Speech.SayXML(const AText: string; const APurge: Boolean);
-var
-  LFlag: Integer;
-  LText: string;
-begin
-  LFlag := SVSFlagsAsync or SVSFIsXML;
-  if APurge then
-    LFlag := LFlag or SVSFPurgeBeforeSpeak;
-  LText := AText;
-  DoSpeak(AText, LFlag);
-end;
-
-class procedure Speech.Clear();
-begin
-  if FSpVoice = nil then Exit;
-  if Active then
-  begin
-    FSpVoice.Skip('Sentence', MaxInt);
-    Say(' ', True);
-  end;
-  FText := '';
-end;
-
-class function Speech.Active(): Boolean;
-begin
-  Result := False;
-  if FSpVoice = nil then Exit;
-  Result := Boolean(FSpVoice.Status.RunningState <> SRSEDone);
-end;
-
-class procedure Speech.Pause();
-begin
-  if FSpVoice = nil then Exit;
-  FSpVoice.Pause;
-  FPaused := True;
-end;
-
-class procedure Speech.Resume();
-begin
-  if FSpVoice = nil then Exit;
-  FSpVoice.Resume;
-  FPaused := False;
-end;
-
-class procedure Speech.Reset();
-begin
-  Clear;
-  FreeAndNil(FSpVoice);
-  FPaused := False;
-  FText := '';
-  FWord := '';
-  FSpVoice := TSpVoice.Create(nil);
-  FSpVoice.EventInterests := SVEAllEvents;
-  EnumVoices;
-  //FSpVoice.OnStartStream := OnStartStream;
-  FSpVoice.OnWord := DoOnWord;
-end;
-
-class procedure Speech.SubstituteWord(const AWord: string; const ASubstituteWord: string);
-var
-  LWord: string;
-  LSubstituteWord: string;
-begin
-  LWord := AWord;
-  LSubstituteWord := ASubstituteWord;
-  if LWord.IsEmpty then Exit;
-  if LSubstituteWord.IsEmpty then Exit;
-  FSubList.TryAdd(LWord, LSubstituteWord);
-end;
-
+{ TPolygon }
 constructor TPolygon.Create();
 begin
   inherited;
@@ -7977,7 +7486,7 @@ var
   LCV: Byte;
   LColor: TColor;
   LViewport: TRect;
-  LScale: SGT.Lib.TPoint;
+  LScale: SGT.Core.TPoint;
 
   function IsVisible(vx, vy, vw, vh: Single): Boolean;
   begin

@@ -44,7 +44,7 @@ program ZipArc;
 {$R *.res}
 
 uses
-  SGT.Lib,
+  SGT.Core,
   UZipArc in 'UZipArc.pas';
 
 begin

@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{7B6187A0-1D35-43A5-A883-50ABA13BF6A6}</ProjectGuid>
         <ProjectVersion>20.1</ProjectVersion>
-        <FrameworkType>None</FrameworkType>
+        <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win64</Platform>
@@ -60,7 +60,7 @@
         <DCC_S>false</DCC_S>
         <DCC_F>false</DCC_F>
         <DCC_K>false</DCC_K>
-        <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
+        <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>
         <SanitizedProjectName>Testbed</SanitizedProjectName>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
@@ -86,6 +86,7 @@
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
         <DCC_ExeOutput>..\..\bin</DCC_ExeOutput>
+        <DCC_UnitSearchPath>..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -119,10 +120,28 @@
         <DCCReference Include="UTestbed.pas"/>
         <DCCReference Include="..\..\src\SGT.Deps.pas"/>
         <DCCReference Include="..\..\src\SGT.OGL.pas"/>
-        <DCCReference Include="..\..\src\SGT.Lib.pas"/>
+        <DCCReference Include="..\..\src\SGT.Core.pas"/>
         <DCCReference Include="..\..\src\SGT.Game.pas"/>
-        <DCCReference Include="..\..\src\SGT.SpeechLib.pas"/>
         <DCCReference Include="..\..\src\SGT.Deps.Ext.pas"/>
+        <DCCReference Include="..\..\src\SGT.TreeMenuForm.pas">
+            <Form>TreeMenuForm</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="..\..\src\SGT.TreeMenu.pas"/>
+        <DCCReference Include="..\..\src\SGT.StartupDialog.pas"/>
+        <DCCReference Include="..\..\src\SGT.StartupDialogForm.pas">
+            <Form>StartupDialogForm</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="..\..\src\SGT.ClaudeAI.pas"/>
+        <DCCReference Include="..\..\src\SGT.SpeechLib.pas"/>
+        <DCCReference Include="..\..\src\SGT.Speech.pas"/>
+        <DCCReference Include="..\..\src\SGT.CloudDB.pas"/>
+        <RcItem Include="AquaLightSlate.vsf">
+            <ContainerId>ResourceItem</ContainerId>
+            <ResourceType>VCLSTYLE</ResourceType>
+            <ResourceId>CUSTOM_STYLE</ResourceId>
+        </RcItem>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -181,6 +200,18 @@
                 <DeployFile LocalName="..\..\bin\Testbed.rsm" Configuration="Debug" Class="DebugSymbols">
                     <Platform Name="Win64">
                         <RemoteName>Testbed.rsm</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="AquaLightSlate.vsf" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win64">
+                        <RemoteDir>.\</RemoteDir>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="AquaLightSlate.vsf" Configuration="Release" Class="ProjectFile">
+                    <Platform Name="Win64">
+                        <RemoteDir>.\</RemoteDir>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
