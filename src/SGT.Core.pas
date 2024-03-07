@@ -4223,6 +4223,9 @@ end;
 
 class function TFileIO.Open(const AFilename: string; const AMode: TIOMode): TFileIO;
 begin
+  Result := nil;
+  if not TFile.Exists(AFilename) then Exit;
+
   Result := TFileIO.Create();
   if not Result.DoOpen(AFilename, AMode) then
   begin

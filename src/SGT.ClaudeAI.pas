@@ -80,7 +80,8 @@ type
     end;
     TMessages = TList<TMessage>;
   protected
-    FSystemMessage: string;
+    FSystemMessages: TStringList;
+    FStopSequences: TStringList;
     FMessages: TMessages;
     FInputTokens: NativeInt;
     FOutputTokens: NativeInt;
@@ -91,29 +92,51 @@ type
     function ConvertFileToBase64(const AFilename: string): string;
     function GetModalNameStr(): string;
     function ProcessMessages(): TJsonArray;
+    function ProcessStopSequences(): TJsonArray;
   public
     constructor Create(); override;
     destructor Destroy(); override;
+
     function  GetInputTokens(): NativeInt;
     function  GetOutputTokens(): NativeInt;
+
     procedure SetModal(const AModal: TClaudeAI.Modal=Sonnet);
     function  GetModal(): TClaudeAI.Modal;
+
     procedure SetApiKey(const AApiKey: string='');
     function  GetApiKey(): string;
+
     procedure SetTemperature(const ATemperature: Single=TEMPERATURE_BALANCED);
     function  GetTemperature(): Single;
+
     procedure SetMaxTokens(const AMaxTokens: NativeInt=1024);
     function  GetMaxTokens(): NativeInt;
+
+    function  ClearSystemMessages(): Boolean;
+    function  GetSystemMessageCount(): NativeInt;
+    function  AddSystemMessage(const AMessage: string): Boolean;
+    function  DeleteSystemMessage(const AIndex: NativeInt): Boolean;
+    function  SaveSystemMessages(const AFilename: string): Boolean;
+    function  LoadSystemMessages(const AFilename: string): Boolean;
+
+    function  ClearStopSequences(): Boolean;
+    function  GetStopSequenceCount(): NativeInt;
+    function  AddStopSequence(const AStopSequence: string): Boolean;
+    function  DeleteStopSequence(const AIndex: NativeInt): Boolean;
+
     function  ClearMessages(): Boolean;
-    procedure SetSystemMessage(const AMessage: string);
-    function  AddImageMessage(const AImage: TClaudeAI.Image; const AFilename: string): Boolean;
+    function  AddImageMessage(const AImage: TClaudeAI.Image; const AIO: TIO): Boolean;
+    function  AddImageMessageFromFile(const AImage: TClaudeAI.Image; const AFilename: string): Boolean;
+    function  AddImageMessageFromZipFile(const AImage: TClaudeAI.Image; const AZipFile: TZipFile; const AFilename: string): Boolean;
     function  AddTextMessage(const AText: string): Boolean;
     function  AddAssistantMessage(const AText: string): Boolean;
     function  DeleteMessage(const AIndex: NativeInt): Boolean;
     function  GetMessageCount(): NativeInt;
     function  LoadMessages(const AStream: TStream): Boolean;
     function  SaveMessages(const AStream: TStream): Boolean;
+
     function  Query(var AResponse: string): Boolean;
+
     procedure SimpleChat();
   end;
 
@@ -125,7 +148,7 @@ var
   LStream: TBytesStream;
 begin
   Result := '';
-  if TFile.Exists(AFilename) then Exit;
+  if not TFile.Exists(AFilename) then Exit;
 
   LStream := TBytesStream.Create();
   try
@@ -224,20 +247,40 @@ begin
   end;
 end;
 
+function TClaudeAI.ProcessStopSequences(): TJsonArray;
+var
+  LItem: string;
+begin
+  Result := TJsonArray.Create();
+
+  for LItem in FStopSequences do
+  begin
+    Result.Add(LItem);
+  end;
+
+end;
+
 constructor TClaudeAI.Create();
 begin
   inherited;
   FMessages := TMessages.Create();
+  FSystemMessages := TStringList.Create();
+  FStopSequences := TStringList.Create();
   FApiKey := TClaudeAI.USE_ENVVAR_APIKEY;
   FModal := Sonnet;
   FTemperature := TEMPERATURE_BALANCED;
   FMaxTokens := 1024;
   ClearMessages();
+  AddStopSequence('</function_calls>');
 end;
 
 destructor TClaudeAI.Destroy();
 begin
+  ClearStopSequences();
   ClearMessages();
+  ClearSystemMessages();
+  FStopSequences.Free();
+  FSystemMessages.Free();
   FMessages.Free();
   inherited;
 end;
@@ -295,6 +338,86 @@ begin
   Result := FMaxTokens;
 end;
 
+function  TClaudeAI.ClearSystemMessages(): Boolean;
+begin
+  Result := False;
+  if not Assigned(FSystemMessages) then Exit;
+  FSystemMessages.Clear();
+  Result := True;
+end;
+
+function  TClaudeAI.GetSystemMessageCount(): NativeInt;
+begin
+  Result := 0;
+  if not Assigned(FSystemMessages) then Exit;
+
+  Result := FSystemMessages.Count;
+end;
+
+function  TClaudeAI.AddSystemMessage(const AMessage: string): Boolean;
+begin
+  Result := False;
+  if not Assigned(FSystemMessages) then Exit;
+  FSystemMessages.Add(AMessage);
+  Result := True;
+end;
+
+function  TClaudeAI.DeleteSystemMessage(const AIndex: NativeInt): Boolean;
+begin
+  Result := False;
+  if not Assigned(FSystemMessages) then Exit;
+  FSystemMessages.Delete(AIndex);
+  Result := True;
+end;
+
+function  TClaudeAI.SaveSystemMessages(const AFilename: string): Boolean;
+begin
+  Result := False;
+  if not Assigned(FSystemMessages) then Exit;
+  FSystemMessages.SaveToFile(AFilename, TEncoding.UTF8);
+  Result := TFile.Exists(AFilename);
+end;
+
+function  TClaudeAI.LoadSystemMessages(const AFilename: string): Boolean;
+begin
+  Result := False;
+  if not Assigned(FSystemMessages) then Exit;
+  if not TFile.Exists(AFilename) then Exit;
+  FSystemMessages.LoadFromFile(AFilename, TEncoding.UTF8);
+  Result := True;
+end;
+
+function  TClaudeAI.ClearStopSequences(): Boolean;
+begin
+  Result := False;
+  if not Assigned(FStopSequences) then Exit;
+  FStopSequences.Clear();
+  Result := True;
+end;
+
+function  TClaudeAI.GetStopSequenceCount(): NativeInt;
+begin
+  Result := 0;
+  if not Assigned(FStopSequences) then Exit;
+  Result := FStopSequences.Count;
+end;
+
+function  TClaudeAI.AddStopSequence(const AStopSequence: string): Boolean;
+begin
+  Result := False;
+  if not Assigned(FStopSequences) then Exit;
+  FStopSequences.Add(AStopSequence);
+  Result := True;
+end;
+
+function  TClaudeAI.DeleteStopSequence(const AIndex: NativeInt): Boolean;
+begin
+  Result := False;
+  if not Assigned(FStopSequences) then Exit;
+  FStopSequences.Delete(AIndex);
+  Result := True;
+end;
+
 function  TClaudeAI.ClearMessages(): Boolean;
 begin
   Result := False;
@@ -302,32 +425,73 @@ begin
   FMessages.Clear();
   FInputTokens := 0;
   FOutputTokens := 0;
+  Result := True;
 end;
 
-procedure TClaudeAI.SetSystemMessage(const AMessage: string);
-begin
-  FSystemMessage := AMessage;
-end;
-
-function  TClaudeAI.AddImageMessage(const AImage: TClaudeAI.Image; const AFilename: string): Boolean;
+function  TClaudeAI.AddImageMessage(const AImage: TClaudeAI.Image; const AIO: TIO): Boolean;
 var
+  LStream: TBytesStream;
   LMessage: TMessage;
   LImage: string;
 begin
   Result := False;
   if not Assigned(FMessages) then Exit;
-  LImage := ConvertFileToBase64(AFIlename);
-  if LImage.IsEmpty then Exit;
-  LMessage.Role := roUser;
-  LMessage.Content := coImage;
-  LMessage.Data := LImage;
-  case AImage of
-    JPG: LMessage.DataType := 'image/jpg';
-    PNG: LMessage.DataType := 'image/png';
-    GIF: LMessage.DataType := 'image/gif';
-    WEBP: LMessage.DataType := 'image/webp';
+  if not Assigned(AIO) then Exit;
+  if AIO.Size < 1 then Exit;
+
+  LStream := TBytesStream.Create();
+  try
+    LStream.SetSize(AIO.Size);
+    AIO.Read(LStream.Memory, AIO.Size);
+    LImage := TNetEncoding.Base64String.EncodeBytesToString(LStream.Memory, LStream.Size);
+    if LImage.IsEmpty then Exit;
+    LMessage.Role := roUser;
+    LMessage.Content := coImage;
+    LMessage.Data := LImage;
+    case AImage of
+      JPG: LMessage.DataType := 'image/jpeg';
+      PNG: LMessage.DataType := 'image/png';
+      GIF: LMessage.DataType := 'image/gif';
+      WEBP: LMessage.DataType := 'image/webp';
+    end;
+    FMessages.Add(LMessage);
+    Result := True;
+  finally
+    LStream.Free();
   end;
-  FMessages.Add(LMessage);
+end;
+
+function  TClaudeAI.AddImageMessageFromFile(const AImage: TClaudeAI.Image; const AFilename: string): Boolean;
+var
+  LIO: TFileIO;
+begin
+  Result := False;
+  if not Assigned(FMessages) then Exit;
+
+  LIO := TFileIO.Open(AFilename, iomRead);
+  try
+    Result := AddImageMessage(AImage, LIO);
+  finally
+    LIO.Free();
+  end;
+end;
+
+function  TClaudeAI.AddImageMessageFromZipFile(const AImage: TClaudeAI.Image; const AZipFile: TZipFile; const AFilename: string): Boolean;
+var
+  LIO: TIO;
+begin
+  Result := False;
+  if not Assigned(FMessages) then Exit;
+  if not Assigned(AZipFile) then Exit;
+  if not AZipFile.IsOpen then Exit;
+  LIO := AZipFile.OpenFile(AFilename);
+  if not Assigned(LIO) then Exit;
+  try
+    Result := AddImageMessage(AIMage, LIO);
+  finally
+    LIO.Free();
+  end;
+
   Result := True;
 end;
 
@@ -410,9 +574,11 @@ begin
     try
       LMessages := ProcessMessages();
       try
-        LJson.AddPair('system', FSystemMessage);
+        LJson.AddPair('system', FSystemMessages.Text);
         LJson.AddPair('model', GetModalNameStr());
         LJson.AddPair('max_tokens', FMaxTokens);
+        if GetStopSequenceCount() > 0 then
+          LJson.AddPair('stop_sequences', ProcessStopSequences());
         LJson.AddPair('messages', LMessages.Clone as TJsonArray);
         LJson.AddPair('temperature', FTemperature);
         LString := LJson.ToString;
@@ -469,18 +635,21 @@ var
 begin
   Console.Clear();
 
+  if not LoadSystemMessages('res/ai/Tools.txt') then
+    Exit;
+
   SetTemperature(TClaudeAI.TEMPERATURE_PERCISE);
 
   LSpeech := True;
-  Speech.SetRate(0.55);
 
-  Console.PrintLn('Spark Game Toolkit: ClaudeAI', Console.CYAN);
+
+  Console.PrintLn('Spark Game Toolkit: ClaudeAI Chat', Console.CYAN);
   Console.PrintLn(Console.CRLF+'   Powered by Claude 3 from Anthropic!', Console.BRIGHTWHITE);
   Console.PrintLn('   Go to https://console.anthropic.com/dashboard to get your API key.', Console.WHITE);
   Console.PrintLn('   Create an environment variable named ClaudeAIApiKey to hold your API key.', Console.WHITE);
   Console.PrintLn(Console.CRLF+'   Enter /help for help, /quit to quit', Console.BRIGHTYELLOW);
 
-  SetSystemMessage('you are a helpful AI assitant, you will answer every question asked by user to the best of your ability');
+  AddSystemMessage('you are a helpful AI assitant, you will answer every question asked by user to the best of your ability');
 
   LDone := False;
   while not LDone do
@@ -540,11 +709,15 @@ begin
 
     if Query(LResponse) then
     begin
+      if LSpeech then
+      begin
+        Speech.SetRate(0.55);
+        Speech.Say(LResponse, True);
+      end;
       AddAssistantMessage(LResponse);
     end;
 
     Console.PrintLn(Console.CRLF+'Answer: ', Console.DARKGREEN);
-    if LSpeech then Speech.Say(LResponse, True);
     Console.Teletype(LResponse, Console.WHITE);
     Console.PrintLn(Console.CRLF+'Input tokens: %d Output tokens: %d', [GetInputTokens(), GetOutputTokens()], Console.BRIGHTYELLOW);
   end;

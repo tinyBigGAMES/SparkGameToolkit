@@ -57,7 +57,8 @@ uses
   SGT.Core,
   SGT.StartupDialog,
   SGT.TreeMenu,
-  SGT.ClaudeAI;
+  SGT.ClaudeAI,
+  SGT.Speech;
 
 type
 
@@ -65,6 +66,8 @@ type
   TTestbed = class(TBaseObject)
   private const
     CZipFilename = 'Data.zip';
+  private
+    FConfigFile: TConfigFile;
   public
     constructor Create(); override;
     destructor Destroy(); override;
@@ -84,7 +87,8 @@ type
     procedure DearImGui();
     procedure Timer();
     procedure EntityCollision();
-    procedure ClaudeAIChat();
+    procedure SimpleAIChat();
+    procedure AIVision();
   end;
 
 procedure RunTests();
@@ -107,10 +111,13 @@ end;
 constructor TTestbed.Create();
 begin
   inherited;
+  FConfigFile := TConfigFile.Create();
+  FConfigFile.Open();
 end;
 
 destructor TTestbed.Destroy();
 begin
+  FConfigFile.Free();
   inherited;
 end;
 
@@ -182,13 +189,16 @@ type
     miMisc_BuildZipFile,
     miMisc_Camera,
     miMisc_Timer,
-    miMisc_ClaudeAIChat,
 
     // video
     miVideo_Playback,
 
     // font
     miFont_Unicode,
+
+    // ai
+    miAI_SimpleChat,
+    miAI_Vision,
 
     miLast
   );
@@ -202,6 +212,7 @@ var
   LFontMenu: Pointer;
   LGuiMenu: Pointer;
   LEntityMenu: Pointer;
+  LAIMenu: Pointer;
   LSelItem: Integer;
 begin
   LTreeMenu := TTreeMenu.Create();
@@ -237,7 +248,6 @@ begin
       LTreeMenu.AddItem(LEntityMenu, 'Collision', Ord(miEntity_Collision), True);
     LTreeMenu.Sort(LEntityMenu);
 
-
     // font
     LFontMenu := LTreeMenu.AddItem(nil, 'Font', TTreeMenu.NONE, True);
       LTreeMenu.AddItem(LFontMenu, 'Unicode', Ord(miFont_Unicode), True);
@@ -248,6 +258,12 @@ begin
       LTreeMenu.AddItem(LGuiMenu, 'Dear ImGui', Ord(miGui_DearImGui), True);
     LTreeMenu.Sort(LGuiMenu);
 
+    // ai
+    LAIMenu := LTreeMenu.AddItem(nil, 'AI', TTreeMenu.NONE, True);
+      LTreeMenu.AddItem(LAIMenu, 'Simple Chat', Ord(miAI_SimpleChat), True);
+      LTreeMenu.AddItem(LAIMenu, 'Vision', Ord(miAI_Vision), True);
+    LTreeMenu.Sort(LAIMenu);
+
     // sort whole menu
     LTreeMenu.Sort(nil);
 
@@ -256,11 +272,10 @@ begin
       LTreeMenu.AddItem(LMiscMenu, 'Build ZipFile', Ord(miMisc_BuildZipFile), True);
       LTreeMenu.AddItem(LMiscMenu, 'Camera', Ord(miMisc_Camera), True);
       LTreeMenu.AddItem(LMiscMenu, 'Timer', Ord(miMisc_Timer), True);
-      LTreeMenu.AddItem(LMiscMenu, 'ClaudeAI Chat', Ord(miMisc_ClaudeAIChat), True);
     LTreeMenu.Sort(LMiscMenu);
 
     // menu loop
-    LSelItem := -1;
+    LSelItem := FConfigFile.GetValue('menu', 'SelItem', -1);
     while true do
     begin
       LSelItem := LTreeMenu.Show(LSelItem);
@@ -272,7 +287,6 @@ begin
         miMisc_BuildZipFile: BuildZipFile();
         miMisc_Camera: Camera();
         miMisc_Timer: Timer();
-        miMisc_ClaudeAIChat: ClaudeAIChat();
 
         // audio
         miAudio_MultiChannel: MultiChannelAudio();
@@ -297,8 +311,14 @@ begin
         miWindow_Basic: BasicWindow();
         miWindow_ScaledRotatedPolygon: ScaledPolygon();
         miWindow_Starfield: Starfield();
+
+        // ai
+        miAI_SimpleChat: SimpleAIChat();
+        miAI_Vision: AIVision();
       end;
     end;
+    FConfigFile.SetValue('menu', 'SelItem', LTreeMenu.GetLastSelectedId);
+    FConfigFile.Update();
   finally
     LTreeMenu.Free();
   end;
@@ -1238,7 +1258,7 @@ begin
   LZipFile.Free();
 end;
 
-procedure TTestbed.ClaudeAIChat();
+procedure TTestbed.SimpleAIChat();
 var
   LClaudeAI: TClaudeAI;
 begin
@@ -1247,6 +1267,47 @@ begin
     LClaudeAI.SimpleChat();
   finally
     LClaudeAI.Free();
+  end;
+end;
+
+procedure TTestbed.AIVision();
+const
+  CImageFilename = 'res/images/cute_kitten.jpg';
+var
+  LClaudeAI: TClaudeAI;
+  LResponse: string;
+  LZipFile: TZipFile;
+begin
+  Console.Clear();
+  Console.PrintLn('Spark Game Toolkit: ClaudeAI Vision', Console.CYAN);
+  Console.PrintLn(Console.CRLF+'   Powered by Claude 3 from Anthropic!', Console.BRIGHTWHITE);
+  Console.PrintLn('   Go to https://console.anthropic.com/dashboard to get your API key.', Console.WHITE);
+  Console.PrintLn('   Create an environment variable named ClaudeAIApiKey to hold your API key.', Console.WHITE);
+  Console.Print(Console.CRLF+'Tell me about this image "%s"...', [CImageFilename], Console.BRIGHTYELLOW);
+
+  LZipFile := TZipFile.Init(CZipFilename);
+  if not Assigned(LZipFile) then Exit;
+  try
+    LClaudeAI := TClaudeAI.Create();
+    try
+      LClaudeAI.SetTemperature(TClaudeAI.TEMPERATURE_CREATIVE);
+      LClaudeAI.AddImageMessageFromZipFile(JPG, LZipFile, CImageFilename);
+      LClaudeAI.AddTextMessage('tell me about this image');
+      if LClaudeAI.Query(LResponse) then
+      begin
+        Speech.SetRate(0.55);
+        Speech.Say(LResponse, True);
+      end;
+      Console.PrintLn();
+      Console.Teletype(LResponse);
+      Console.PrintLn();
+      Console.Pause();
+    finally
+      LClaudeAI.Free();
+    end;
+
+  finally
+    LZipFile.Free();
   end;
 end;
 

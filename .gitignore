@@ -75,5 +75,6 @@ modules/
 bin/Data.zip
 bin/imgui.ini
 docs/SGT.chw
+bin/Testbed.ini
 
 
