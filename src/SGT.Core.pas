@@ -189,7 +189,7 @@ type
     class function  IsKeyPressed(AKey: Byte): Boolean;
     class function  WasKeyReleased(AKey: Byte): Boolean;
     class function  WasKeyPressed(AKey: Byte): Boolean;
-    class procedure Pause(aColor: DWORD=Console.WHITE; const aMsg: string=''; const AForcePause: Boolean=False);
+    class procedure Pause(const AForcePause: Boolean=False; aColor: DWORD=Console.WHITE; const aMsg: string='');
     class procedure ClearKeyboardBuffer();
     class function  ReadKey(): Char;
     class function  ReadLnX(const AAllowedChars: TSysCharSet; AMaxLength: Integer; const AColor:DWORD=Console.WHITE): string;
@@ -2122,7 +2122,7 @@ begin
   end;
 end;
 
-class procedure Console.Pause(aColor: DWORD; const aMsg: string; const AForcePause: Boolean);
+class procedure Console.Pause(const AForcePause: Boolean; aColor: DWORD; const aMsg: string);
 var
   LDoPause: Boolean;
 begin

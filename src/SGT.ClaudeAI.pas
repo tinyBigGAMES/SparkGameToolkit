@@ -89,7 +89,6 @@ type
     FApiKey: string;
     FTemperature: Single;
     FMaxTokens: NativeInt;
-    function ConvertFileToBase64(const AFilename: string): string;
     function GetModalNameStr(): string;
     function ProcessMessages(): TJsonArray;
     function ProcessStopSequences(): TJsonArray;
@@ -103,10 +102,10 @@ type
     procedure SetModal(const AModal: TClaudeAI.Modal=Sonnet);
     function  GetModal(): TClaudeAI.Modal;
 
-    procedure SetApiKey(const AApiKey: string='');
+    procedure SetApiKey(const AApiKey: string=TClaudeAI.USE_ENVVAR_APIKEY);
     function  GetApiKey(): string;
 
-    procedure SetTemperature(const ATemperature: Single=TEMPERATURE_BALANCED);
+    procedure SetTemperature(const ATemperature: Single=TClaudeAI.TEMPERATURE_BALANCED);
     function  GetTemperature(): Single;
 
     procedure SetMaxTokens(const AMaxTokens: NativeInt=1024);
@@ -117,7 +116,9 @@ type
     function  AddSystemMessage(const AMessage: string): Boolean;
     function  DeleteSystemMessage(const AIndex: NativeInt): Boolean;
     function  SaveSystemMessages(const AFilename: string): Boolean;
-    function  LoadSystemMessages(const AFilename: string): Boolean;
+    function  LoadSystemMessages(const AIO: TIO): Boolean;
+    function  LoadSystemMessagesFromFile(const AFilename: string): Boolean;
+    function  LoadSystemMessagesFromZipFile(const AZipFile: TZipFile; const AFilename: string): Boolean;
 
     function  ClearStopSequences(): Boolean;
     function  GetStopSequenceCount(): NativeInt;
@@ -143,22 +144,6 @@ type
 implementation
 
 { TAIEngine }
-function TClaudeAI.ConvertFileToBase64(const AFilename: string): string;
-var
-  LStream: TBytesStream;
-begin
-  Result := '';
-  if not TFile.Exists(AFilename) then Exit;
-
-  LStream := TBytesStream.Create();
-  try
-    LStream.LoadFromFile(AFilename);
-    Result := TNetEncoding.Base64String.EncodeBytesToString(LStream.Memory, LStream.Size);
-  finally
-    LStream.Free();
-  end;
-end;
-
 function TClaudeAI.GetModalNameStr(): string;
 begin
   case FModal of
@@ -378,13 +363,61 @@ begin
   Result := TFile.Exists(AFilename);
 end;
 
-function  TClaudeAI.LoadSystemMessages(const AFilename: string): Boolean;
+function  TClaudeAI.LoadSystemMessages(const AIO: TIO): Boolean;
+var
+  LStream: TStringStream;
+begin
+  Result := False;
+  if not Assigned(FSystemMessages) then Exit;
+  if not Assigned(AIO) then Exit;
+  if AIO.Size < 1 then Exit;
+
+  LStream := TStringStream.Create();
+  try
+    LStream.SetSize(AIO.Size);
+    AIO.Read(LStream.Memory, AIO.Size);
+    LStream.Position := 0;
+    FSystemMessages.LoadFromStream(LStream, TEncoding.UTF8);
+    Result := not FSystemMessages.Text.IsEmpty;
+  finally
+    LStream.Free();
+  end;
+end;
+
+function  TClaudeAI.LoadSystemMessagesFromFile(const AFilename: string): Boolean;
+var
+  LIO: TFileIO;
 begin
   Result := False;
   if not Assigned(FSystemMessages) then Exit;
   if not TFile.Exists(AFilename) then Exit;
-  FSystemMessages.LoadFromFile(AFilename, TEncoding.UTF8);
-  Result := True;
+
+  LIO := TFileIO.Open(AFilename, iomRead);
+  if not Assigned(LIO) then Exit;
+  try
+    Result := LoadSystemMessages(LIO);
+  finally
+    LIO.Free();
+  end;
+end;
+
+function  TClaudeAI.LoadSystemMessagesFromZipFile(const AZipFile: TZipFile; const AFilename: string): Boolean;
+var
+  LIO: TIO;
+begin
+  Result := False;
+  if not Assigned(FSystemMessages) then Exit;
+  if not Assigned(AZipFile) then Exit;
+  if not AZipFile.IsOpen then Exit;
+
+  LIO := AZipFile.OpenFile(AFilename);
+  if not Assigned(LIO) then Exit;
+  try
+    Result := LoadSystemMessages(LIO);
+  finally
+    LIO.Free();
+  end;
+
 end;
 
 function  TClaudeAI.ClearStopSequences(): Boolean;
@@ -484,6 +517,7 @@ begin
   if not Assigned(FMessages) then Exit;
   if not Assigned(AZipFile) then Exit;
   if not AZipFile.IsOpen then Exit;
+
   LIO := AZipFile.OpenFile(AFilename);
   if not Assigned(LIO) then Exit;
   try
@@ -491,8 +525,6 @@ begin
   finally
     LIO.Free();
   end;
-
-  Result := True;
 end;
 
 function  TClaudeAI.AddTextMessage(const AText: string): Boolean;
@@ -541,7 +573,6 @@ function  TClaudeAI.LoadMessages(const AStream: TStream): Boolean;
 begin
   Result := False;
   if not Assigned(FMessages) then Exit;
-
 end;
 
 function  TClaudeAI.SaveMessages(const AStream: TStream): Boolean;
@@ -549,8 +580,6 @@ begin
   Result := False;
   if not Assigned(FMessages) then Exit;
 end;
-
-
 
 function  TClaudeAI.Query(var AResponse: string): Boolean;
 const
@@ -634,9 +663,6 @@ var
   LCmd: string;
 begin
   Console.Clear();
-
-  if not LoadSystemMessages('res/ai/Tools.txt') then
-    Exit;
 
   SetTemperature(TClaudeAI.TEMPERATURE_PERCISE);
 
@@ -726,7 +752,7 @@ begin
 
   Console.PrintLn(Console.CRLF+'Thanks for using ClaudeAI, have a nice day!', Console.BRIGHTYELLOW);
 
-  Console.Pause();
+  Console.Pause(True);
 end;
 
 end.

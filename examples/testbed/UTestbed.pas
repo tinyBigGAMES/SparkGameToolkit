@@ -1260,13 +1260,20 @@ end;
 
 procedure TTestbed.SimpleAIChat();
 var
+  LZipFile: TZipFile;
   LClaudeAI: TClaudeAI;
 begin
-  LClaudeAI := TClaudeAI.Create();
+  LZipFile := TZipFile.Init(CZipFilename);
   try
-    LClaudeAI.SimpleChat();
+    LClaudeAI := TClaudeAI.Create();
+    try
+      if not LClaudeAI.LoadSystemMessagesFromZipFile(LZipFile, 'res/ai/Tools.txt') then Exit;
+      LClaudeAI.SimpleChat();
+    finally
+      LClaudeAI.Free();
+    end;
   finally
-    LClaudeAI.Free();
+    LZipFile.Free();
   end;
 end;
 
@@ -1301,7 +1308,7 @@ begin
       Console.PrintLn();
       Console.Teletype(LResponse);
       Console.PrintLn();
-      Console.Pause();
+      Console.Pause(True);
     finally
       LClaudeAI.Free();
     end;
