@@ -8,6 +8,7 @@ The following table includes the open-source libraries utilized in the Spark Gam
 | cute_headers | Single-file Game focus libraries for C/C++            | [cute_headers](https://github.com/RandyGaul/cute_headers) |
 | enet         | Reliable UDP networking library                       | [enet](https://github.com/zpl-c/enet) |
 | glfw         | OpenGL library for creating windows, contexts, etc.   | [glfw](https://github.com/glfw/glfw) |
+| LuaJIT       | A Just-In-Time (JIT) compiler for the Lua programming language.| [LuaJIT](https://github.com/LuaJIT/LuaJIT) |
 | miniaudio    | Audio playback and capture library                    | [miniaudio](https://github.com/mackron/miniaudio) |
 | nanosvg      | Simple SVG parser library                             | [nanosvg](https://github.com/memononen/nanosvg) |
 | pl_mpeg      | MPEG1 Video decoder, MP2 Audio decoder, Muxer         | [pl_mpeg](https://github.com/phoboslab/pl_mpeg) |
