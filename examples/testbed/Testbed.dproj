@@ -137,6 +137,7 @@
         <DCCReference Include="..\..\src\SGT.SpeechLib.pas"/>
         <DCCReference Include="..\..\src\SGT.Speech.pas"/>
         <DCCReference Include="..\..\src\SGT.CloudDB.pas"/>
+        <DCCReference Include="..\..\src\SGT.Lua.pas"/>
         <RcItem Include="AquaLightSlate.vsf">
             <ContainerId>ResourceItem</ContainerId>
             <ResourceType>VCLSTYLE</ResourceType>
@@ -194,6 +195,12 @@
                 <DeployFile LocalName="..\..\bin\Testbed.exe" Configuration="Release" Class="ProjectOutput">
                     <Platform Name="Win64">
                         <RemoteName>Testbed.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="..\..\bin\Testbed.rsm" Configuration="Debug" Class="DebugSymbols">
+                    <Platform Name="Win64">
+                        <RemoteName>Testbed.rsm</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

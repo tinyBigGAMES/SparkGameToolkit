@@ -465,6 +465,98 @@ const
   IMGUI_HAS_DOCK = 1;
   ImDrawCallback_ResetRenderState = Pointer(-8);
   C2_MAX_POLYGON_VERTS = 8;
+  LUA_LDIR = '!\lua\';
+  LUA_CDIR = '!\';
+  LUA_PATH_DEFAULT = '.\?.lua;' + LUA_LDIR + '?.lua;' + LUA_LDIR + '?\init.lua;';
+  LUA_CPATH_DEFAULT = '.\?.dll;' + LUA_CDIR + '?.dll;' + LUA_CDIR + 'loadall.dll';
+  LUA_PATH = 'LUA_PATH';
+  LUA_CPATH = 'LUA_CPATH';
+  LUA_INIT = 'LUA_INIT';
+  LUA_DIRSEP = '\';
+  LUA_PATHSEP = ';';
+  LUA_PATH_MARK = '?';
+  LUA_EXECDIR = '!';
+  LUA_IGMARK = '-';
+  LUA_PATH_CONFIG = LUA_DIRSEP + #10 + LUA_PATHSEP + #10 + LUA_PATH_MARK + #10 + LUA_EXECDIR + #10 + LUA_IGMARK + #10;
+  LUAI_MAXSTACK = 65500;
+  LUAI_MAXCSTACK = 8000;
+  LUAI_GCPAUSE = 200;
+  LUAI_GCMUL = 200;
+  LUA_MAXCAPTURES = 32;
+  LUA_IDSIZE = 60;
+  BUFSIZ = 512;
+  LUA_NUMBER_SCAN = '%lf';
+  LUA_NUMBER_FMT = '%.14g';
+  LUAI_MAXNUMBER2STR = 32;
+  LUA_INTFRMLEN = 'l';
+  LUA_VERSION_ = 'Lua 5.1';
+  LUA_RELEASE = 'Lua 5.1.4';
+  LUA_VERSION_NUM = 501;
+  LUA_COPYRIGHT = 'Copyright (C) 1994-2008 Lua.org, PUC-Rio';
+  LUA_AUTHORS = 'R. Ierusalimschy, L. H. de Figueiredo & W. Celes';
+  LUA_SIGNATURE = #27'Lua';
+  LUA_MULTRET = (-1);
+  LUA_REGISTRYINDEX = (-10000);
+  LUA_ENVIRONINDEX = (-10001);
+  LUA_GLOBALSINDEX = (-10002);
+  LUA_OK = 0;
+  LUA_YIELD_ = 1;
+  LUA_ERRRUN = 2;
+  LUA_ERRSYNTAX = 3;
+  LUA_ERRMEM = 4;
+  LUA_ERRERR = 5;
+  LUA_TNONE = (-1);
+  LUA_TNIL = 0;
+  LUA_TBOOLEAN = 1;
+  LUA_TLIGHTUSERDATA = 2;
+  LUA_TNUMBER = 3;
+  LUA_TSTRING = 4;
+  LUA_TTABLE = 5;
+  LUA_TFUNCTION = 6;
+  LUA_TUSERDATA = 7;
+  LUA_TTHREAD = 8;
+  LUA_MINSTACK = 20;
+  LUA_GCSTOP = 0;
+  LUA_GCRESTART = 1;
+  LUA_GCCOLLECT = 2;
+  LUA_GCCOUNT = 3;
+  LUA_GCCOUNTB = 4;
+  LUA_GCSTEP = 5;
+  LUA_GCSETPAUSE = 6;
+  LUA_GCSETSTEPMUL = 7;
+  LUA_GCISRUNNING = 9;
+  LUA_HOOKCALL = 0;
+  LUA_HOOKRET = 1;
+  LUA_HOOKLINE = 2;
+  LUA_HOOKCOUNT = 3;
+  LUA_HOOKTAILRET = 4;
+  LUA_MASKCALL = (1 shl LUA_HOOKCALL);
+  LUA_MASKRET = (1 shl LUA_HOOKRET);
+  LUA_MASKLINE = (1 shl LUA_HOOKLINE);
+  LUA_MASKCOUNT = (1 shl LUA_HOOKCOUNT);
+  LUA_FILEHANDLE = 'FILE*';
+  LUA_COLIBNAME = 'coroutine';
+  LUA_MATHLIBNAME = 'math';
+  LUA_STRLIBNAME = 'string';
+  LUA_TABLIBNAME = 'table';
+  LUA_IOLIBNAME = 'io';
+  LUA_OSLIBNAME = 'os';
+  LUA_LOADLIBNAME = 'package';
+  LUA_DBLIBNAME = 'debug';
+  LUA_BITLIBNAME = 'bit';
+  LUA_JITLIBNAME = 'jit';
+  LUA_FFILIBNAME = 'ffi';
+  LUA_ERRFILE = (LUA_ERRERR+1);
+  LUA_NOREF = (-2);
+  LUA_REFNIL = (-1);
+  LUAJIT_VERSION = 'LuaJIT 2.1.1710088188';
+  LUAJIT_VERSION_NUM = 20199;
+  LUAJIT_COPYRIGHT = 'Copyright (C) 2005-2023 Mike Pall';
+  LUAJIT_URL = 'https://luajit.org/';
+  LUAJIT_MODE_MASK = $00ff;
+  LUAJIT_MODE_OFF = $0000;
+  LUAJIT_MODE_ON = $0100;
+  LUAJIT_MODE_FLUSH = $0200;
 
 const
   ENET_PROTOCOL_MINIMUM_MTU = 576;
@@ -2796,6 +2888,16 @@ const
   C2_TYPE_CAPSULE = 2;
   C2_TYPE_POLY = 3;
 
+const
+  LUAJIT_MODE_ENGINE = 0;
+  LUAJIT_MODE_DEBUG = 1;
+  LUAJIT_MODE_FUNC = 2;
+  LUAJIT_MODE_ALLFUNC = 3;
+  LUAJIT_MODE_ALLSUBFUNC = 4;
+  LUAJIT_MODE_TRACE = 5;
+  LUAJIT_MODE_WRAPCFUNC = 16;
+  LUAJIT_MODE_MAX = 17;
+
 type
   // Forward declarations
   PPUTF8Char = ^PUTF8Char;
@@ -3217,6 +3319,9 @@ type
   Pc2Manifold = ^c2Manifold;
   Pc2GJKCache = ^c2GJKCache;
   Pc2TOIResult = ^c2TOIResult;
+  Plua_Debug = ^lua_Debug;
+  PluaL_Reg = ^luaL_Reg;
+  PluaL_Buffer = ^luaL_Buffer;
 
   GLFWglproc = procedure(); cdecl;
 
@@ -4421,15 +4526,15 @@ type
     lpfNyquistFactor: Double;
   end;
 
-  P_anonymous_type_12 = ^_anonymous_type_12;
-  _anonymous_type_12 = record
+  P_anonymous_type_13 = ^_anonymous_type_13;
+  _anonymous_type_13 = record
     case Integer of
       0: (f32: PSingle);
       1: (s16: Pma_int16);
   end;
 
-  P_anonymous_type_13 = ^_anonymous_type_13;
-  _anonymous_type_13 = record
+  P_anonymous_type_14 = ^_anonymous_type_14;
+  _anonymous_type_14 = record
     case Integer of
       0: (f32: PSingle);
       1: (s16: Pma_int16);
@@ -4441,8 +4546,8 @@ type
     inAdvanceFrac: ma_uint32;
     inTimeInt: ma_uint32;
     inTimeFrac: ma_uint32;
-    x0: _anonymous_type_12;
-    x1: _anonymous_type_13;
+    x0: _anonymous_type_13;
+    x1: _anonymous_type_14;
     lpf: ma_lpf;
     _pHeap: Pointer;
     _ownsHeap: ma_bool32;
@@ -4464,8 +4569,8 @@ type
     onReset: function(pUserData: Pointer; pBackend: Pma_resampling_backend): ma_result; cdecl;
   end;
 
-  P_anonymous_type_14 = ^_anonymous_type_14;
-  _anonymous_type_14 = record
+  P_anonymous_type_15 = ^_anonymous_type_15;
+  _anonymous_type_15 = record
     lpfOrder: ma_uint32;
   end;
 
@@ -4477,11 +4582,11 @@ type
     algorithm: ma_resample_algorithm;
     pBackendVTable: Pma_resampling_backend_vtable;
     pBackendUserData: Pointer;
-    linear: _anonymous_type_14;
+    linear: _anonymous_type_15;
   end;
 
-  P_anonymous_type_15 = ^_anonymous_type_15;
-  _anonymous_type_15 = record
+  P_anonymous_type_16 = ^_anonymous_type_16;
+  _anonymous_type_16 = record
     case Integer of
       0: (linear: ma_linear_resampler);
   end;
@@ -4494,7 +4599,7 @@ type
     channels: ma_uint32;
     sampleRateIn: ma_uint32;
     sampleRateOut: ma_uint32;
-    state: _anonymous_type_15;
+    state: _anonymous_type_16;
     _pHeap: Pointer;
     _ownsHeap: ma_bool32;
   end;
@@ -4510,8 +4615,8 @@ type
     ppWeights: PPSingle;
   end;
 
-  P_anonymous_type_16 = ^_anonymous_type_16;
-  _anonymous_type_16 = record
+  P_anonymous_type_17 = ^_anonymous_type_17;
+  _anonymous_type_17 = record
     case Integer of
       0: (f32: PPSingle);
       1: (s16: PPma_int32);
@@ -4526,7 +4631,7 @@ type
     pChannelMapIn: Pma_channel;
     pChannelMapOut: Pma_channel;
     pShuffleTable: Pma_uint8;
-    weights: _anonymous_type_16;
+    weights: _anonymous_type_17;
     _pHeap: Pointer;
     _ownsHeap: ma_bool32;
   end;
@@ -4715,29 +4820,29 @@ type
 
   ma_job_proc = function(pJob: Pma_job): ma_result; cdecl;
 
-  P_anonymous_type_17 = ^_anonymous_type_17;
-  _anonymous_type_17 = record
+  P_anonymous_type_18 = ^_anonymous_type_18;
+  _anonymous_type_18 = record
     code: ma_uint16;
     slot: ma_uint16;
     refcount: ma_uint32;
   end;
 
-  P_anonymous_type_18 = ^_anonymous_type_18;
-  _anonymous_type_18 = record
+  P_anonymous_type_19 = ^_anonymous_type_19;
+  _anonymous_type_19 = record
     case Integer of
-      0: (breakup: _anonymous_type_17);
+      0: (breakup: _anonymous_type_18);
       1: (allocation: ma_uint64);
   end;
 
-  P_anonymous_type_19 = ^_anonymous_type_19;
-  _anonymous_type_19 = record
+  P_anonymous_type_20 = ^_anonymous_type_20;
+  _anonymous_type_20 = record
     proc: ma_job_proc;
     data0: ma_uintptr;
     data1: ma_uintptr;
   end;
 
-  P_anonymous_type_20 = ^_anonymous_type_20;
-  _anonymous_type_20 = record
+  P_anonymous_type_21 = ^_anonymous_type_21;
+  _anonymous_type_21 = record
     pResourceManager: Pointer;
     pDataBufferNode: Pointer;
     pFilePath: PUTF8Char;
@@ -4749,16 +4854,16 @@ type
     pDoneFence: Pma_fence;
   end;
 
-  P_anonymous_type_21 = ^_anonymous_type_21;
-  _anonymous_type_21 = record
+  P_anonymous_type_22 = ^_anonymous_type_22;
+  _anonymous_type_22 = record
     pResourceManager: Pointer;
     pDataBufferNode: Pointer;
     pDoneNotification: Pma_async_notification;
     pDoneFence: Pma_fence;
   end;
 
-  P_anonymous_type_22 = ^_anonymous_type_22;
-  _anonymous_type_22 = record
+  P_anonymous_type_23 = ^_anonymous_type_23;
+  _anonymous_type_23 = record
     pResourceManager: Pointer;
     pDataBufferNode: Pointer;
     pDecoder: Pointer;
@@ -4766,8 +4871,8 @@ type
     pDoneFence: Pma_fence;
   end;
 
-  P_anonymous_type_23 = ^_anonymous_type_23;
-  _anonymous_type_23 = record
+  P_anonymous_type_24 = ^_anonymous_type_24;
+  _anonymous_type_24 = record
     pDataBuffer: Pointer;
     pInitNotification: Pma_async_notification;
     pDoneNotification: Pma_async_notification;
@@ -4780,15 +4885,15 @@ type
     isLooping: ma_uint32;
   end;
 
-  P_anonymous_type_24 = ^_anonymous_type_24;
-  _anonymous_type_24 = record
+  P_anonymous_type_25 = ^_anonymous_type_25;
+  _anonymous_type_25 = record
     pDataBuffer: Pointer;
     pDoneNotification: Pma_async_notification;
     pDoneFence: Pma_fence;
   end;
 
-  P_anonymous_type_25 = ^_anonymous_type_25;
-  _anonymous_type_25 = record
+  P_anonymous_type_26 = ^_anonymous_type_26;
+  _anonymous_type_26 = record
     pDataStream: Pointer;
     pFilePath: PUTF8Char;
     pFilePathW: PWideChar;
@@ -4797,70 +4902,70 @@ type
     pInitFence: Pma_fence;
   end;
 
-  P_anonymous_type_26 = ^_anonymous_type_26;
-  _anonymous_type_26 = record
+  P_anonymous_type_27 = ^_anonymous_type_27;
+  _anonymous_type_27 = record
     pDataStream: Pointer;
     pDoneNotification: Pma_async_notification;
     pDoneFence: Pma_fence;
   end;
 
-  P_anonymous_type_27 = ^_anonymous_type_27;
-  _anonymous_type_27 = record
+  P_anonymous_type_28 = ^_anonymous_type_28;
+  _anonymous_type_28 = record
     pDataStream: Pointer;
     pageIndex: ma_uint32;
   end;
 
-  P_anonymous_type_28 = ^_anonymous_type_28;
-  _anonymous_type_28 = record
+  P_anonymous_type_29 = ^_anonymous_type_29;
+  _anonymous_type_29 = record
     pDataStream: Pointer;
     frameIndex: ma_uint64;
   end;
 
-  P_anonymous_type_29 = ^_anonymous_type_29;
-  _anonymous_type_29 = record
-    case Integer of
-      0: (loadDataBufferNode: _anonymous_type_20);
-      1: (freeDataBufferNode: _anonymous_type_21);
-      2: (pageDataBufferNode: _anonymous_type_22);
-      3: (loadDataBuffer: _anonymous_type_23);
-      4: (freeDataBuffer: _anonymous_type_24);
-      5: (loadDataStream: _anonymous_type_25);
-      6: (freeDataStream: _anonymous_type_26);
-      7: (pageDataStream: _anonymous_type_27);
-      8: (seekDataStream: _anonymous_type_28);
-  end;
-
   P_anonymous_type_30 = ^_anonymous_type_30;
   _anonymous_type_30 = record
-    pDevice: Pointer;
-    deviceType: ma_uint32;
+    case Integer of
+      0: (loadDataBufferNode: _anonymous_type_21);
+      1: (freeDataBufferNode: _anonymous_type_22);
+      2: (pageDataBufferNode: _anonymous_type_23);
+      3: (loadDataBuffer: _anonymous_type_24);
+      4: (freeDataBuffer: _anonymous_type_25);
+      5: (loadDataStream: _anonymous_type_26);
+      6: (freeDataStream: _anonymous_type_27);
+      7: (pageDataStream: _anonymous_type_28);
+      8: (seekDataStream: _anonymous_type_29);
   end;
 
   P_anonymous_type_31 = ^_anonymous_type_31;
   _anonymous_type_31 = record
-    case Integer of
-      0: (reroute: _anonymous_type_30);
+    pDevice: Pointer;
+    deviceType: ma_uint32;
   end;
 
   P_anonymous_type_32 = ^_anonymous_type_32;
   _anonymous_type_32 = record
     case Integer of
-      0: (aaudio: _anonymous_type_31);
+      0: (reroute: _anonymous_type_31);
   end;
 
   P_anonymous_type_33 = ^_anonymous_type_33;
   _anonymous_type_33 = record
     case Integer of
-      0: (custom: _anonymous_type_19);
-      1: (resourceManager: _anonymous_type_29);
-      2: (device: _anonymous_type_32);
+      0: (aaudio: _anonymous_type_32);
+  end;
+
+  P_anonymous_type_34 = ^_anonymous_type_34;
+  _anonymous_type_34 = record
+    case Integer of
+      0: (custom: _anonymous_type_20);
+      1: (resourceManager: _anonymous_type_30);
+      2: (device: _anonymous_type_33);
   end;
 
   ma_job = record
-    toc: _anonymous_type_18;
+    toc: _anonymous_type_19;
     next: ma_uint64;
     order: ma_uint32;
-    data: _anonymous_type_33;
+    data: _anonymous_type_34;
   end;
 
   ma_job_queue_config = record
@@ -4903,11 +5008,6 @@ type
     _hasThread: ma_bool32;
   end;
 
-  P_anonymous_type_34 = ^_anonymous_type_34;
-  _anonymous_type_34 = record
-    _unused: Integer;
-  end;
-
   P_anonymous_type_35 = ^_anonymous_type_35;
   _anonymous_type_35 = record
     _unused: Integer;
@@ -4925,17 +5025,22 @@ type
 
   P_anonymous_type_38 = ^_anonymous_type_38;
   _anonymous_type_38 = record
+    _unused: Integer;
+  end;
+
+  P_anonymous_type_39 = ^_anonymous_type_39;
+  _anonymous_type_39 = record
     case Integer of
-      0: (started: _anonymous_type_34);
-      1: (stopped: _anonymous_type_35);
-      2: (rerouted: _anonymous_type_36);
-      3: (interruption: _anonymous_type_37);
+      0: (started: _anonymous_type_35);
+      1: (stopped: _anonymous_type_36);
+      2: (rerouted: _anonymous_type_37);
+      3: (interruption: _anonymous_type_38);
   end;
 
   ma_device_notification = record
     pDevice: Pma_device;
     &type: ma_device_notification_type;
-    data: _anonymous_type_38;
+    data: _anonymous_type_39;
   end;
 
   ma_device_notification_proc = procedure(const pNotification: Pma_device_notification); cdecl;
@@ -4950,8 +5055,8 @@ type
       1: (counterD: Double);
   end;
 
-  P_anonymous_type_39 = ^_anonymous_type_39;
-  _anonymous_type_39 = record
+  P_anonymous_type_40 = ^_anonymous_type_40;
+  _anonymous_type_40 = record
     case Integer of
       0: (i: Integer);
       1: (s: array [0..255] of UTF8Char);
@@ -4974,12 +5079,12 @@ type
       10: (aaudio: ma_int32);
       11: (opensl: ma_uint32);
       12: (webaudio: array [0..31] of UTF8Char);
-      13: (custom: _anonymous_type_39);
+      13: (custom: _anonymous_type_40);
       14: (nullbackend: Integer);
   end;
 
-  P_anonymous_type_40 = ^_anonymous_type_40;
-  _anonymous_type_40 = record
+  P_anonymous_type_41 = ^_anonymous_type_41;
+  _anonymous_type_41 = record
     format: ma_format;
     channels: ma_uint32;
     sampleRate: ma_uint32;
@@ -4991,18 +5096,7 @@ type
     name: array [0..255] of UTF8Char;
     isDefault: ma_bool32;
     nativeDataFormatCount: ma_uint32;
-    nativeDataFormats: array [0..63] of _anonymous_type_40;
-  end;
-
-  P_anonymous_type_41 = ^_anonymous_type_41;
-  _anonymous_type_41 = record
-    pDeviceID: Pma_device_id;
-    format: ma_format;
-    channels: ma_uint32;
-    pChannelMap: Pma_channel;
-    channelMixMode: ma_channel_mix_mode;
-    calculateLFEFromSpatialChannels: ma_bool32;
-    shareMode: ma_share_mode;
+    nativeDataFormats: array [0..63] of _anonymous_type_41;
   end;
 
   P_anonymous_type_42 = ^_anonymous_type_42;
@@ -5018,6 +5112,17 @@ type
 
   P_anonymous_type_43 = ^_anonymous_type_43;
   _anonymous_type_43 = record
+    pDeviceID: Pma_device_id;
+    format: ma_format;
+    channels: ma_uint32;
+    pChannelMap: Pma_channel;
+    channelMixMode: ma_channel_mix_mode;
+    calculateLFEFromSpatialChannels: ma_bool32;
+    shareMode: ma_share_mode;
+  end;
+
+  P_anonymous_type_44 = ^_anonymous_type_44;
+  _anonymous_type_44 = record
     usage: ma_wasapi_usage;
     noAutoConvertSRC: ma_bool8;
     noDefaultQualitySRC: ma_bool8;
@@ -5027,34 +5132,34 @@ type
     loopbackProcessExclude: ma_bool8;
   end;
 
-  P_anonymous_type_44 = ^_anonymous_type_44;
-  _anonymous_type_44 = record
+  P_anonymous_type_45 = ^_anonymous_type_45;
+  _anonymous_type_45 = record
     noMMap: ma_bool32;
     noAutoFormat: ma_bool32;
     noAutoChannels: ma_bool32;
     noAutoResample: ma_bool32;
   end;
 
-  P_anonymous_type_45 = ^_anonymous_type_45;
-  _anonymous_type_45 = record
+  P_anonymous_type_46 = ^_anonymous_type_46;
+  _anonymous_type_46 = record
     pStreamNamePlayback: PUTF8Char;
     pStreamNameCapture: PUTF8Char;
   end;
 
-  P_anonymous_type_46 = ^_anonymous_type_46;
-  _anonymous_type_46 = record
+  P_anonymous_type_47 = ^_anonymous_type_47;
+  _anonymous_type_47 = record
     allowNominalSampleRateChange: ma_bool32;
   end;
 
-  P_anonymous_type_47 = ^_anonymous_type_47;
-  _anonymous_type_47 = record
+  P_anonymous_type_48 = ^_anonymous_type_48;
+  _anonymous_type_48 = record
     streamType: ma_opensl_stream_type;
     recordingPreset: ma_opensl_recording_preset;
     enableCompatibilityWorkarounds: ma_bool32;
   end;
 
-  P_anonymous_type_48 = ^_anonymous_type_48;
-  _anonymous_type_48 = record
+  P_anonymous_type_49 = ^_anonymous_type_49;
+  _anonymous_type_49 = record
     usage: ma_aaudio_usage;
     contentType: ma_aaudio_content_type;
     inputPreset: ma_aaudio_input_preset;
@@ -5079,14 +5184,14 @@ type
     stopCallback: ma_stop_proc;
     pUserData: Pointer;
     resampling: ma_resampler_config;
-    playback: _anonymous_type_41;
-    capture: _anonymous_type_42;
-    wasapi: _anonymous_type_43;
-    alsa: _anonymous_type_44;
-    pulse: _anonymous_type_45;
-    coreaudio: _anonymous_type_46;
-    opensl: _anonymous_type_47;
-    aaudio: _anonymous_type_48;
+    playback: _anonymous_type_42;
+    capture: _anonymous_type_43;
+    wasapi: _anonymous_type_44;
+    alsa: _anonymous_type_45;
+    pulse: _anonymous_type_46;
+    coreaudio: _anonymous_type_47;
+    opensl: _anonymous_type_48;
+    aaudio: _anonymous_type_49;
   end;
 
   ma_enum_devices_callback_proc = function(pContext: Pma_context; deviceType: ma_device_type; const pInfo: Pma_device_info; pUserData: Pointer): ma_bool32; cdecl;
@@ -5119,28 +5224,28 @@ type
     onDeviceGetInfo: function(pDevice: Pma_device; &type: ma_device_type; pDeviceInfo: Pma_device_info): ma_result; cdecl;
   end;
 
-  P_anonymous_type_49 = ^_anonymous_type_49;
-  _anonymous_type_49 = record
+  P_anonymous_type_50 = ^_anonymous_type_50;
+  _anonymous_type_50 = record
     useVerboseDeviceEnumeration: ma_bool32;
   end;
 
-  P_anonymous_type_50 = ^_anonymous_type_50;
-  _anonymous_type_50 = record
+  P_anonymous_type_51 = ^_anonymous_type_51;
+  _anonymous_type_51 = record
     pApplicationName: PUTF8Char;
     pServerName: PUTF8Char;
     tryAutoSpawn: ma_bool32;
   end;
 
-  P_anonymous_type_51 = ^_anonymous_type_51;
-  _anonymous_type_51 = record
+  P_anonymous_type_52 = ^_anonymous_type_52;
+  _anonymous_type_52 = record
     sessionCategory: ma_ios_session_category;
     sessionCategoryOptions: ma_uint32;
     noAudioSessionActivate: ma_bool32;
     noAudioSessionDeactivate: ma_bool32;
   end;
 
-  P_anonymous_type_52 = ^_anonymous_type_52;
-  _anonymous_type_52 = record
+  P_anonymous_type_53 = ^_anonymous_type_53;
+  _anonymous_type_53 = record
     pClientName: PUTF8Char;
     tryStartServer: ma_bool32;
   end;
@@ -5151,48 +5256,48 @@ type
     threadStackSize: NativeUInt;
     pUserData: Pointer;
     allocationCallbacks: ma_allocation_callbacks;
-    alsa: _anonymous_type_49;
-    pulse: _anonymous_type_50;
-    coreaudio: _anonymous_type_51;
-    jack: _anonymous_type_52;
+    alsa: _anonymous_type_50;
+    pulse: _anonymous_type_51;
+    coreaudio: _anonymous_type_52;
+    jack: _anonymous_type_53;
     custom: ma_backend_callbacks;
-  end;
-
-  P_anonymous_type_53 = ^_anonymous_type_53;
-  _anonymous_type_53 = record
-    _unused: Integer;
   end;
 
   P_anonymous_type_54 = ^_anonymous_type_54;
   _anonymous_type_54 = record
+    _unused: Integer;
+  end;
+
+  P_anonymous_type_55 = ^_anonymous_type_55;
+  _anonymous_type_55 = record
     deviceType: ma_device_type;
     pAudioClient: Pointer;
     ppAudioClientService: PPointer;
     pResult: Pma_result;
   end;
 
-  P_anonymous_type_55 = ^_anonymous_type_55;
-  _anonymous_type_55 = record
+  P_anonymous_type_56 = ^_anonymous_type_56;
+  _anonymous_type_56 = record
     pDevice: Pma_device;
     deviceType: ma_device_type;
   end;
 
-  P_anonymous_type_56 = ^_anonymous_type_56;
-  _anonymous_type_56 = record
+  P_anonymous_type_57 = ^_anonymous_type_57;
+  _anonymous_type_57 = record
     case Integer of
-      0: (quit: _anonymous_type_53);
-      1: (createAudioClient: _anonymous_type_54);
-      2: (releaseAudioClient: _anonymous_type_55);
+      0: (quit: _anonymous_type_54);
+      1: (createAudioClient: _anonymous_type_55);
+      2: (releaseAudioClient: _anonymous_type_56);
   end;
 
   ma_context_command__wasapi = record
     code: Integer;
     pEvent: Pma_event;
-    data: _anonymous_type_56;
+    data: _anonymous_type_57;
   end;
 
-  P_anonymous_type_57 = ^_anonymous_type_57;
-  _anonymous_type_57 = record
+  P_anonymous_type_58 = ^_anonymous_type_58;
+  _anonymous_type_58 = record
     commandThread: ma_thread;
     commandLock: ma_mutex;
     commandSem: ma_semaphore;
@@ -5206,8 +5311,8 @@ type
     ActivateAudioInterfaceAsync: ma_proc;
   end;
 
-  P_anonymous_type_58 = ^_anonymous_type_58;
-  _anonymous_type_58 = record
+  P_anonymous_type_59 = ^_anonymous_type_59;
+  _anonymous_type_59 = record
     hDSoundDLL: ma_handle;
     DirectSoundCreate: ma_proc;
     DirectSoundEnumerateA: ma_proc;
@@ -5215,8 +5320,8 @@ type
     DirectSoundCaptureEnumerateA: ma_proc;
   end;
 
-  P_anonymous_type_59 = ^_anonymous_type_59;
-  _anonymous_type_59 = record
+  P_anonymous_type_60 = ^_anonymous_type_60;
+  _anonymous_type_60 = record
     hWinMM: ma_handle;
     waveOutGetNumDevs: ma_proc;
     waveOutGetDevCapsA: ma_proc;
@@ -5237,8 +5342,8 @@ type
     waveInReset: ma_proc;
   end;
 
-  P_anonymous_type_60 = ^_anonymous_type_60;
-  _anonymous_type_60 = record
+  P_anonymous_type_61 = ^_anonymous_type_61;
+  _anonymous_type_61 = record
     jackSO: ma_handle;
     jack_client_open: ma_proc;
     jack_client_close: ma_proc;
@@ -5260,23 +5365,23 @@ type
     tryStartServer: ma_bool32;
   end;
 
-  P_anonymous_type_61 = ^_anonymous_type_61;
-  _anonymous_type_61 = record
-    _unused: Integer;
-  end;
-
   P_anonymous_type_62 = ^_anonymous_type_62;
   _anonymous_type_62 = record
-    case Integer of
-      0: (wasapi: _anonymous_type_57);
-      1: (dsound: _anonymous_type_58);
-      2: (winmm: _anonymous_type_59);
-      3: (jack: _anonymous_type_60);
-      4: (null_backend: _anonymous_type_61);
+    _unused: Integer;
   end;
 
   P_anonymous_type_63 = ^_anonymous_type_63;
   _anonymous_type_63 = record
+    case Integer of
+      0: (wasapi: _anonymous_type_58);
+      1: (dsound: _anonymous_type_59);
+      2: (winmm: _anonymous_type_60);
+      3: (jack: _anonymous_type_61);
+      4: (null_backend: _anonymous_type_62);
+  end;
+
+  P_anonymous_type_64 = ^_anonymous_type_64;
+  _anonymous_type_64 = record
     hOle32DLL: ma_handle;
     CoInitialize: ma_proc;
     CoInitializeEx: ma_proc;
@@ -5295,10 +5400,10 @@ type
     CoInitializeResult: Integer;
   end;
 
-  P_anonymous_type_64 = ^_anonymous_type_64;
-  _anonymous_type_64 = record
+  P_anonymous_type_65 = ^_anonymous_type_65;
+  _anonymous_type_65 = record
     case Integer of
-      0: (win32: _anonymous_type_63);
+      0: (win32: _anonymous_type_64);
       1: (_unused: Integer);
   end;
 
@@ -5317,25 +5422,25 @@ type
     playbackDeviceInfoCount: ma_uint32;
     captureDeviceInfoCount: ma_uint32;
     pDeviceInfos: Pma_device_info;
-    f15: _anonymous_type_62;
-    f16: _anonymous_type_64;
-  end;
-
-  P_anonymous_type_65 = ^_anonymous_type_65;
-  _anonymous_type_65 = record
-    lpfOrder: ma_uint32;
+    f15: _anonymous_type_63;
+    f16: _anonymous_type_65;
   end;
 
   P_anonymous_type_66 = ^_anonymous_type_66;
   _anonymous_type_66 = record
-    algorithm: ma_resample_algorithm;
-    pBackendVTable: Pma_resampling_backend_vtable;
-    pBackendUserData: Pointer;
-    linear: _anonymous_type_65;
+    lpfOrder: ma_uint32;
   end;
 
   P_anonymous_type_67 = ^_anonymous_type_67;
   _anonymous_type_67 = record
+    algorithm: ma_resample_algorithm;
+    pBackendVTable: Pma_resampling_backend_vtable;
+    pBackendUserData: Pointer;
+    linear: _anonymous_type_66;
+  end;
+
+  P_anonymous_type_68 = ^_anonymous_type_68;
+  _anonymous_type_68 = record
     pID: Pma_device_id;
     id: ma_device_id;
     name: array [0..255] of UTF8Char;
@@ -5361,8 +5466,8 @@ type
     inputCacheRemaining: ma_uint64;
   end;
 
-  P_anonymous_type_68 = ^_anonymous_type_68;
-  _anonymous_type_68 = record
+  P_anonymous_type_69 = ^_anonymous_type_69;
+  _anonymous_type_69 = record
     pID: Pma_device_id;
     id: ma_device_id;
     name: array [0..255] of UTF8Char;
@@ -5384,8 +5489,8 @@ type
     intermediaryBufferLen: ma_uint32;
   end;
 
-  P_anonymous_type_69 = ^_anonymous_type_69;
-  _anonymous_type_69 = record
+  P_anonymous_type_70 = ^_anonymous_type_70;
+  _anonymous_type_70 = record
     pAudioClientPlayback: ma_ptr;
     pAudioClientCapture: ma_ptr;
     pRenderClient: ma_ptr;
@@ -5424,8 +5529,8 @@ type
     rerouteLock: ma_mutex;
   end;
 
-  P_anonymous_type_70 = ^_anonymous_type_70;
-  _anonymous_type_70 = record
+  P_anonymous_type_71 = ^_anonymous_type_71;
+  _anonymous_type_71 = record
     pPlayback: ma_ptr;
     pPlaybackPrimaryBuffer: ma_ptr;
     pPlaybackBuffer: ma_ptr;
@@ -5433,8 +5538,8 @@ type
     pCaptureBuffer: ma_ptr;
   end;
 
-  P_anonymous_type_71 = ^_anonymous_type_71;
-  _anonymous_type_71 = record
+  P_anonymous_type_72 = ^_anonymous_type_72;
+  _anonymous_type_72 = record
     hDevicePlayback: ma_handle;
     hDeviceCapture: ma_handle;
     hEventPlayback: ma_handle;
@@ -5451,8 +5556,8 @@ type
     _pHeapData: Pma_uint8;
   end;
 
-  P_anonymous_type_72 = ^_anonymous_type_72;
-  _anonymous_type_72 = record
+  P_anonymous_type_73 = ^_anonymous_type_73;
+  _anonymous_type_73 = record
     pClient: ma_ptr;
     ppPortsPlayback: Pma_ptr;
     ppPortsCapture: Pma_ptr;
@@ -5460,8 +5565,8 @@ type
     pIntermediaryBufferCapture: PSingle;
   end;
 
-  P_anonymous_type_73 = ^_anonymous_type_73;
-  _anonymous_type_73 = record
+  P_anonymous_type_74 = ^_anonymous_type_74;
+  _anonymous_type_74 = record
     deviceThread: ma_thread;
     operationEvent: ma_event;
     operationCompletionEvent: ma_event;
@@ -5477,14 +5582,14 @@ type
     isStarted: ma_atomic_bool32;
   end;
 
-  P_anonymous_type_74 = ^_anonymous_type_74;
-  _anonymous_type_74 = record
+  P_anonymous_type_75 = ^_anonymous_type_75;
+  _anonymous_type_75 = record
     case Integer of
-      0: (wasapi: _anonymous_type_69);
-      1: (dsound: _anonymous_type_70);
-      2: (winmm: _anonymous_type_71);
-      3: (jack: _anonymous_type_72);
-      4: (null_device: _anonymous_type_73);
+      0: (wasapi: _anonymous_type_70);
+      1: (dsound: _anonymous_type_71);
+      2: (winmm: _anonymous_type_72);
+      3: (jack: _anonymous_type_73);
+      4: (null_device: _anonymous_type_74);
   end;
 
   ma_device = record
@@ -5509,10 +5614,10 @@ type
     noFixedSizedCallback: ma_bool8;
     masterVolumeFactor: ma_atomic_float;
     duplexRB: ma_duplex_rb;
-    resampling: _anonymous_type_66;
-    playback: _anonymous_type_67;
-    capture: _anonymous_type_68;
-    f25: _anonymous_type_74;
+    resampling: _anonymous_type_67;
+    playback: _anonymous_type_68;
+    capture: _anonymous_type_69;
+    f25: _anonymous_type_75;
   end;
 
   Pma_vfs = Pointer;
@@ -5581,24 +5686,24 @@ type
     pCustomBackendUserData: Pointer;
   end;
 
-  P_anonymous_type_75 = ^_anonymous_type_75;
-  _anonymous_type_75 = record
+  P_anonymous_type_76 = ^_anonymous_type_76;
+  _anonymous_type_76 = record
     pVFS: Pma_vfs;
     &file: ma_vfs_file;
   end;
 
-  P_anonymous_type_76 = ^_anonymous_type_76;
-  _anonymous_type_76 = record
+  P_anonymous_type_77 = ^_anonymous_type_77;
+  _anonymous_type_77 = record
     pData: Pma_uint8;
     dataSize: NativeUInt;
     currentReadPos: NativeUInt;
   end;
 
-  P_anonymous_type_77 = ^_anonymous_type_77;
-  _anonymous_type_77 = record
+  P_anonymous_type_78 = ^_anonymous_type_78;
+  _anonymous_type_78 = record
     case Integer of
-      0: (vfs: _anonymous_type_75);
-      1: (memory: _anonymous_type_76);
+      0: (vfs: _anonymous_type_76);
+      1: (memory: _anonymous_type_77);
   end;
 
   ma_decoder = record
@@ -5620,7 +5725,7 @@ type
     inputCacheConsumed: ma_uint64;
     inputCacheRemaining: ma_uint64;
     allocationCallbacks: ma_allocation_callbacks;
-    data: _anonymous_type_77;
+    data: _anonymous_type_78;
   end;
 
   ma_encoder_write_proc = function(pEncoder: Pma_encoder; const pBufferIn: Pointer; bytesToWrite: NativeUInt; pBytesWritten: PNativeUInt): ma_result; cdecl;
@@ -5641,16 +5746,16 @@ type
     allocationCallbacks: ma_allocation_callbacks;
   end;
 
-  P_anonymous_type_78 = ^_anonymous_type_78;
-  _anonymous_type_78 = record
+  P_anonymous_type_79 = ^_anonymous_type_79;
+  _anonymous_type_79 = record
     pVFS: Pma_vfs;
     &file: ma_vfs_file;
   end;
 
-  P_anonymous_type_79 = ^_anonymous_type_79;
-  _anonymous_type_79 = record
+  P_anonymous_type_80 = ^_anonymous_type_80;
+  _anonymous_type_80 = record
     case Integer of
-      0: (vfs: _anonymous_type_78);
+      0: (vfs: _anonymous_type_79);
   end;
 
   ma_encoder = record
@@ -5662,7 +5767,7 @@ type
     onWritePCMFrames: ma_encoder_write_pcm_frames_proc;
     pUserData: Pointer;
     pInternalEncoder: Pointer;
-    data: _anonymous_type_79;
+    data: _anonymous_type_80;
   end;
 
   ma_waveform_config = record
@@ -5704,30 +5809,30 @@ type
     duplicateChannels: ma_bool32;
   end;
 
-  P_anonymous_type_80 = ^_anonymous_type_80;
-  _anonymous_type_80 = record
+  P_anonymous_type_81 = ^_anonymous_type_81;
+  _anonymous_type_81 = record
     bin: PPDouble;
     accumulation: PDouble;
     counter: Pma_uint32;
   end;
 
-  P_anonymous_type_81 = ^_anonymous_type_81;
-  _anonymous_type_81 = record
+  P_anonymous_type_82 = ^_anonymous_type_82;
+  _anonymous_type_82 = record
     accumulation: PDouble;
   end;
 
-  P_anonymous_type_82 = ^_anonymous_type_82;
-  _anonymous_type_82 = record
+  P_anonymous_type_83 = ^_anonymous_type_83;
+  _anonymous_type_83 = record
     case Integer of
-      0: (pink: _anonymous_type_80);
-      1: (brownian: _anonymous_type_81);
+      0: (pink: _anonymous_type_81);
+      1: (brownian: _anonymous_type_82);
   end;
 
   ma_noise = record
     ds: ma_data_source_base;
     config: ma_noise_config;
     lcg: ma_lcg;
-    state: _anonymous_type_82;
+    state: _anonymous_type_83;
     _pHeap: Pointer;
     _ownsHeap: ma_bool32;
   end;
@@ -5755,14 +5860,14 @@ type
     flags: ma_uint32;
   end;
 
-  P_anonymous_type_83 = ^_anonymous_type_83;
-  _anonymous_type_83 = record
+  P_anonymous_type_84 = ^_anonymous_type_84;
+  _anonymous_type_84 = record
     pData: Pointer;
     sizeInBytes: NativeUInt;
   end;
 
-  P_anonymous_type_84 = ^_anonymous_type_84;
-  _anonymous_type_84 = record
+  P_anonymous_type_85 = ^_anonymous_type_85;
+  _anonymous_type_85 = record
     pData: Pointer;
     totalFrameCount: ma_uint64;
     decodedFrameCount: ma_uint64;
@@ -5771,24 +5876,24 @@ type
     sampleRate: ma_uint32;
   end;
 
-  P_anonymous_type_85 = ^_anonymous_type_85;
-  _anonymous_type_85 = record
+  P_anonymous_type_86 = ^_anonymous_type_86;
+  _anonymous_type_86 = record
     data: ma_paged_audio_buffer_data;
     decodedFrameCount: ma_uint64;
     sampleRate: ma_uint32;
   end;
 
-  P_anonymous_type_86 = ^_anonymous_type_86;
-  _anonymous_type_86 = record
+  P_anonymous_type_87 = ^_anonymous_type_87;
+  _anonymous_type_87 = record
     case Integer of
-      0: (encoded: _anonymous_type_83);
-      1: (decoded: _anonymous_type_84);
-      2: (decodedPaged: _anonymous_type_85);
+      0: (encoded: _anonymous_type_84);
+      1: (decoded: _anonymous_type_85);
+      2: (decodedPaged: _anonymous_type_86);
   end;
 
   ma_resource_manager_data_supply = record
     &type: ma_resource_manager_data_supply_type;
-    backend: _anonymous_type_86;
+    backend: _anonymous_type_87;
   end;
 
   ma_resource_manager_data_buffer_node = record
@@ -5804,8 +5909,8 @@ type
     pChildHi: Pma_resource_manager_data_buffer_node;
   end;
 
-  P_anonymous_type_87 = ^_anonymous_type_87;
-  _anonymous_type_87 = record
+  P_anonymous_type_88 = ^_anonymous_type_88;
+  _anonymous_type_88 = record
     case Integer of
       0: (decoder: ma_decoder);
       1: (buffer: ma_audio_buffer);
@@ -5824,7 +5929,7 @@ type
     result: ma_result;
     isLooping: ma_bool32;
     isConnectorInitialized: ma_atomic_bool32;
-    connector: _anonymous_type_87;
+    connector: _anonymous_type_88;
   end;
 
   ma_resource_manager_data_stream = record
@@ -5848,15 +5953,15 @@ type
     seekCounter: ma_bool32;
   end;
 
-  P_anonymous_type_88 = ^_anonymous_type_88;
-  _anonymous_type_88 = record
+  P_anonymous_type_89 = ^_anonymous_type_89;
+  _anonymous_type_89 = record
     case Integer of
       0: (buffer: ma_resource_manager_data_buffer);
       1: (stream: ma_resource_manager_data_stream);
   end;
 
   ma_resource_manager_data_source = record
-    backend: _anonymous_type_88;
+    backend: _anonymous_type_89;
     flags: ma_uint32;
     executionCounter: ma_uint32;
     executionPointer: ma_uint32;
@@ -6086,8 +6191,8 @@ type
     pinnedListenerIndex: ma_uint8;
   end;
 
-  P_anonymous_type_89 = ^_anonymous_type_89;
-  _anonymous_type_89 = record
+  P_anonymous_type_90 = ^_anonymous_type_90;
+  _anonymous_type_90 = record
     volumeBeg: ma_atomic_float;
     volumeEnd: ma_atomic_float;
     fadeLengthInFrames: ma_atomic_uint64;
@@ -6112,7 +6217,7 @@ type
     isPitchDisabled: ma_bool32;
     isSpatializationDisabled: ma_bool32;
     pinnedListenerIndex: ma_uint32;
-    fadeSettings: _anonymous_type_89;
+    fadeSettings: _anonymous_type_90;
     _ownsHeap: ma_bool8;
     _pHeap: Pointer;
   end;
@@ -6572,8 +6677,8 @@ type
     Buf: ImVector_char;
   end;
 
-  P_anonymous_type_90 = ^_anonymous_type_90;
-  _anonymous_type_90 = record
+  P_anonymous_type_91 = ^_anonymous_type_91;
+  _anonymous_type_91 = record
     case Integer of
       0: (val_i: Integer);
       1: (val_f: Single);
@@ -6582,7 +6687,7 @@ type
 
   ImGuiStoragePair = record
     key: ImGuiID;
-    f2: _anonymous_type_90;
+    f2: _anonymous_type_91;
   end;
 
   ImVector_ImGuiStoragePair = record
@@ -7064,8 +7169,8 @@ type
     BackupValue: ImVec4;
   end;
 
-  P_anonymous_type_91 = ^_anonymous_type_91;
-  _anonymous_type_91 = record
+  P_anonymous_type_92 = ^_anonymous_type_92;
+  _anonymous_type_92 = record
     case Integer of
       0: (BackupInt: array [0..1] of Integer);
       1: (BackupFloat: array [0..1] of Single);
@@ -7073,7 +7178,7 @@ type
 
   ImGuiStyleMod = record
     VarIdx: ImGuiStyleVar;
-    f2: _anonymous_type_91;
+    f2: _anonymous_type_92;
   end;
 
   ImGuiComboPreviewData = record
@@ -7295,8 +7400,8 @@ type
     Focused: Boolean;
   end;
 
-  P_anonymous_type_92 = ^_anonymous_type_92;
-  _anonymous_type_92 = record
+  P_anonymous_type_93 = ^_anonymous_type_93;
+  _anonymous_type_93 = record
     case Integer of
       0: (MousePos: ImGuiInputEventMousePos);
       1: (MouseWheel: ImGuiInputEventMouseWheel);
@@ -7311,7 +7416,7 @@ type
     &Type: ImGuiInputEventType;
     Source: ImGuiInputSource;
     EventId: ImU32;
-    f4: _anonymous_type_92;
+    f4: _anonymous_type_93;
     AddedByTestEngine: Boolean;
   end;
 
@@ -8593,8 +8698,8 @@ type
     stops: array [0..0] of NSVGgradientStop;
   end;
 
-  P_anonymous_type_93 = ^_anonymous_type_93;
-  _anonymous_type_93 = record
+  P_anonymous_type_94 = ^_anonymous_type_94;
+  _anonymous_type_94 = record
     case Integer of
       0: (color: Cardinal);
       1: (gradient: PNSVGgradient);
@@ -8602,7 +8707,7 @@ type
 
   NSVGpaint = record
     &type: UTF8Char;
-    f2: _anonymous_type_93;
+    f2: _anonymous_type_94;
   end;
 
   NSVGpath = record
@@ -8724,6 +8829,50 @@ type
     p: c2v;
     iterations: Integer;
   end;
+
+  Plua_State = Pointer;
+  PPlua_State = ^Plua_State;
+
+  lua_CFunction = function(L: Plua_State): Integer; cdecl;
+
+  lua_Reader = function(L: Plua_State; ud: Pointer; sz: PNativeUInt): PUTF8Char; cdecl;
+
+  lua_Writer = function(L: Plua_State; const p: Pointer; sz: NativeUInt; ud: Pointer): Integer; cdecl;
+
+  lua_Alloc = function(ud: Pointer; ptr: Pointer; osize: NativeUInt; nsize: NativeUInt): Pointer; cdecl;
+  lua_Number = Double;
+  Plua_Number = ^lua_Number;
+  lua_Integer = NativeInt;
+
+  lua_Hook = procedure(L: Plua_State; ar: Plua_Debug); cdecl;
+
+  lua_Debug = record
+    event: Integer;
+    name: PUTF8Char;
+    namewhat: PUTF8Char;
+    what: PUTF8Char;
+    source: PUTF8Char;
+    currentline: Integer;
+    nups: Integer;
+    linedefined: Integer;
+    lastlinedefined: Integer;
+    short_src: array [0..59] of UTF8Char;
+    i_ci: Integer;
+  end;
+
+  luaL_Reg = record
+    name: PUTF8Char;
+    func: lua_CFunction;
+  end;
+
+  luaL_Buffer = record
+    p: PUTF8Char;
+    lvl: Integer;
+    L: Plua_State;
+    buffer: array [0..511] of UTF8Char;
+  end;
+
+  luaJIT_profile_callback = procedure(data: Pointer; L: Plua_State; samples: Integer; vmstate: Integer); cdecl;
 
 const
 
@@ -17178,6 +17327,450 @@ procedure c2Collide(const A: Pointer; const ax: Pc2x; typeA: C2_TYPE; const B: P
 
 function c2CastRay(A: c2Ray; const B: Pointer; const bx: Pc2x; typeB: C2_TYPE; &out: Pc2Raycast): Integer; cdecl;
   external SGT_DLL name _PU + 'c2CastRay';
+
+function lua_newstate(f: lua_Alloc; ud: Pointer): Plua_State; cdecl;
+  external SGT_DLL name _PU + 'lua_newstate';
+
+procedure lua_close(L: Plua_State); cdecl;
+  external SGT_DLL name _PU + 'lua_close';
+
+function lua_newthread(L: Plua_State): Plua_State; cdecl;
+  external SGT_DLL name _PU + 'lua_newthread';
+
+function lua_atpanic(L: Plua_State; panicf: lua_CFunction): lua_CFunction; cdecl;
+  external SGT_DLL name _PU + 'lua_atpanic';
+
+function lua_gettop(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_gettop';
+
+procedure lua_settop(L: Plua_State; idx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_settop';
+
+procedure lua_pushvalue(L: Plua_State; idx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_pushvalue';
+
+procedure lua_remove(L: Plua_State; idx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_remove';
+
+procedure lua_insert(L: Plua_State; idx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_insert';
+
+procedure lua_replace(L: Plua_State; idx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_replace';
+
+function lua_checkstack(L: Plua_State; sz: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_checkstack';
+
+procedure lua_xmove(from: Plua_State; &to: Plua_State; n: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_xmove';
+
+function lua_isnumber(L: Plua_State; idx: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_isnumber';
+
+function lua_isstring(L: Plua_State; idx: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_isstring';
+
+function lua_iscfunction(L: Plua_State; idx: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_iscfunction';
+
+function lua_isuserdata(L: Plua_State; idx: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_isuserdata';
+
+function lua_type(L: Plua_State; idx: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_type';
+
+function lua_typename(L: Plua_State; tp: Integer): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'lua_typename';
+
+function lua_equal(L: Plua_State; idx1: Integer; idx2: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_equal';
+
+function lua_rawequal(L: Plua_State; idx1: Integer; idx2: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_rawequal';
+
+function lua_lessthan(L: Plua_State; idx1: Integer; idx2: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_lessthan';
+
+function lua_tonumber(L: Plua_State; idx: Integer): lua_Number; cdecl;
+  external SGT_DLL name _PU + 'lua_tonumber';
+
+function lua_tointeger(L: Plua_State; idx: Integer): lua_Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_tointeger';
+
+function lua_toboolean(L: Plua_State; idx: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_toboolean';
+
+function lua_tolstring(L: Plua_State; idx: Integer; len: PNativeUInt): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'lua_tolstring';
+
+function lua_objlen(L: Plua_State; idx: Integer): NativeUInt; cdecl;
+  external SGT_DLL name _PU + 'lua_objlen';
+
+function lua_tocfunction(L: Plua_State; idx: Integer): lua_CFunction; cdecl;
+  external SGT_DLL name _PU + 'lua_tocfunction';
+
+function lua_touserdata(L: Plua_State; idx: Integer): Pointer; cdecl;
+  external SGT_DLL name _PU + 'lua_touserdata';
+
+function lua_tothread(L: Plua_State; idx: Integer): Plua_State; cdecl;
+  external SGT_DLL name _PU + 'lua_tothread';
+
+function lua_topointer(L: Plua_State; idx: Integer): Pointer; cdecl;
+  external SGT_DLL name _PU + 'lua_topointer';
+
+procedure lua_pushnil(L: Plua_State); cdecl;
+  external SGT_DLL name _PU + 'lua_pushnil';
+
+procedure lua_pushnumber(L: Plua_State; n: lua_Number); cdecl;
+  external SGT_DLL name _PU + 'lua_pushnumber';
+
+procedure lua_pushinteger(L: Plua_State; n: lua_Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_pushinteger';
+
+procedure lua_pushlstring(L: Plua_State; const s: PUTF8Char; l_: NativeUInt); cdecl;
+  external SGT_DLL name _PU + 'lua_pushlstring';
+
+procedure lua_pushstring(L: Plua_State; const s: PUTF8Char); cdecl;
+  external SGT_DLL name _PU + 'lua_pushstring';
+
+function lua_pushvfstring(L: Plua_State; const fmt: PUTF8Char; argp: Pointer): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'lua_pushvfstring';
+
+function lua_pushfstring(L: Plua_State; const fmt: PUTF8Char): PUTF8Char varargs; cdecl;
+  external SGT_DLL name _PU + 'lua_pushfstring';
+
+procedure lua_pushcclosure(L: Plua_State; fn: lua_CFunction; n: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_pushcclosure';
+
+procedure lua_pushboolean(L: Plua_State; b: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_pushboolean';
+
+procedure lua_pushlightuserdata(L: Plua_State; p: Pointer); cdecl;
+  external SGT_DLL name _PU + 'lua_pushlightuserdata';
+
+function lua_pushthread(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_pushthread';
+
+procedure lua_gettable(L: Plua_State; idx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_gettable';
+
+procedure lua_getfield(L: Plua_State; idx: Integer; const k: PUTF8Char); cdecl;
+  external SGT_DLL name _PU + 'lua_getfield';
+
+procedure lua_rawget(L: Plua_State; idx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_rawget';
+
+procedure lua_rawgeti(L: Plua_State; idx: Integer; n: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_rawgeti';
+
+procedure lua_createtable(L: Plua_State; narr: Integer; nrec: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_createtable';
+
+function lua_newuserdata(L: Plua_State; sz: NativeUInt): Pointer; cdecl;
+  external SGT_DLL name _PU + 'lua_newuserdata';
+
+function lua_getmetatable(L: Plua_State; objindex: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_getmetatable';
+
+procedure lua_getfenv(L: Plua_State; idx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_getfenv';
+
+procedure lua_settable(L: Plua_State; idx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_settable';
+
+procedure lua_setfield(L: Plua_State; idx: Integer; const k: PUTF8Char); cdecl;
+  external SGT_DLL name _PU + 'lua_setfield';
+
+procedure lua_rawset(L: Plua_State; idx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_rawset';
+
+procedure lua_rawseti(L: Plua_State; idx: Integer; n: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_rawseti';
+
+function lua_setmetatable(L: Plua_State; objindex: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_setmetatable';
+
+function lua_setfenv(L: Plua_State; idx: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_setfenv';
+
+procedure lua_call(L: Plua_State; nargs: Integer; nresults: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_call';
+
+function lua_pcall(L: Plua_State; nargs: Integer; nresults: Integer; errfunc: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_pcall';
+
+function lua_cpcall(L: Plua_State; func: lua_CFunction; ud: Pointer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_cpcall';
+
+function lua_load(L: Plua_State; reader: lua_Reader; dt: Pointer; const chunkname: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_load';
+
+function lua_dump(L: Plua_State; writer: lua_Writer; data: Pointer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_dump';
+
+function lua_yield(L: Plua_State; nresults: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_yield';
+
+function lua_resume(L: Plua_State; narg: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_resume';
+
+function lua_status(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_status';
+
+function lua_gc(L: Plua_State; what: Integer; data: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_gc';
+
+function lua_error(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_error';
+
+function lua_next(L: Plua_State; idx: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_next';
+
+procedure lua_concat(L: Plua_State; n: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_concat';
+
+function lua_getallocf(L: Plua_State; ud: PPointer): lua_Alloc; cdecl;
+  external SGT_DLL name _PU + 'lua_getallocf';
+
+procedure lua_setallocf(L: Plua_State; f: lua_Alloc; ud: Pointer); cdecl;
+  external SGT_DLL name _PU + 'lua_setallocf';
+
+function lua_getstack(L: Plua_State; level: Integer; ar: Plua_Debug): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_getstack';
+
+function lua_getinfo(L: Plua_State; const what: PUTF8Char; ar: Plua_Debug): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_getinfo';
+
+function lua_getlocal(L: Plua_State; const ar: Plua_Debug; n: Integer): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'lua_getlocal';
+
+function lua_setlocal(L: Plua_State; const ar: Plua_Debug; n: Integer): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'lua_setlocal';
+
+function lua_getupvalue(L: Plua_State; funcindex: Integer; n: Integer): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'lua_getupvalue';
+
+function lua_setupvalue(L: Plua_State; funcindex: Integer; n: Integer): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'lua_setupvalue';
+
+function lua_sethook(L: Plua_State; func: lua_Hook; mask: Integer; count: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_sethook';
+
+function lua_gethook(L: Plua_State): lua_Hook; cdecl;
+  external SGT_DLL name _PU + 'lua_gethook';
+
+function lua_gethookmask(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_gethookmask';
+
+function lua_gethookcount(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_gethookcount';
+
+function lua_upvalueid(L: Plua_State; idx: Integer; n: Integer): Pointer; cdecl;
+  external SGT_DLL name _PU + 'lua_upvalueid';
+
+procedure lua_upvaluejoin(L: Plua_State; idx1: Integer; n1: Integer; idx2: Integer; n2: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_upvaluejoin';
+
+function lua_loadx(L: Plua_State; reader: lua_Reader; dt: Pointer; const chunkname: PUTF8Char; const mode: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_loadx';
+
+function lua_version(L: Plua_State): Plua_Number; cdecl;
+  external SGT_DLL name _PU + 'lua_version';
+
+procedure lua_copy(L: Plua_State; fromidx: Integer; toidx: Integer); cdecl;
+  external SGT_DLL name _PU + 'lua_copy';
+
+function lua_tonumberx(L: Plua_State; idx: Integer; isnum: PInteger): lua_Number; cdecl;
+  external SGT_DLL name _PU + 'lua_tonumberx';
+
+function lua_tointegerx(L: Plua_State; idx: Integer; isnum: PInteger): lua_Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_tointegerx';
+
+function lua_isyieldable(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'lua_isyieldable';
+
+function luaopen_base(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_base';
+
+function luaopen_math(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_math';
+
+function luaopen_string(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_string';
+
+function luaopen_table(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_table';
+
+function luaopen_io(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_io';
+
+function luaopen_os(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_os';
+
+function luaopen_package(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_package';
+
+function luaopen_debug(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_debug';
+
+function luaopen_bit(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_bit';
+
+function luaopen_jit(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_jit';
+
+function luaopen_ffi(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_ffi';
+
+function luaopen_string_buffer(L: Plua_State): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaopen_string_buffer';
+
+procedure luaL_openlibs(L: Plua_State); cdecl;
+  external SGT_DLL name _PU + 'luaL_openlibs';
+
+procedure luaL_openlib(L: Plua_State; const libname: PUTF8Char; const l_: PluaL_Reg; nup: Integer); cdecl;
+  external SGT_DLL name _PU + 'luaL_openlib';
+
+procedure luaL_register(L: Plua_State; const libname: PUTF8Char; const l_: PluaL_Reg); cdecl;
+  external SGT_DLL name _PU + 'luaL_register';
+
+function luaL_getmetafield(L: Plua_State; obj: Integer; const e: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_getmetafield';
+
+function luaL_callmeta(L: Plua_State; obj: Integer; const e: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_callmeta';
+
+function luaL_typerror(L: Plua_State; narg: Integer; const tname: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_typerror';
+
+function luaL_argerror(L: Plua_State; numarg: Integer; const extramsg: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_argerror';
+
+function luaL_checklstring(L: Plua_State; numArg: Integer; l_: PNativeUInt): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'luaL_checklstring';
+
+function luaL_optlstring(L: Plua_State; numArg: Integer; const def: PUTF8Char; l_: PNativeUInt): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'luaL_optlstring';
+
+function luaL_checknumber(L: Plua_State; numArg: Integer): lua_Number; cdecl;
+  external SGT_DLL name _PU + 'luaL_checknumber';
+
+function luaL_optnumber(L: Plua_State; nArg: Integer; def: lua_Number): lua_Number; cdecl;
+  external SGT_DLL name _PU + 'luaL_optnumber';
+
+function luaL_checkinteger(L: Plua_State; numArg: Integer): lua_Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_checkinteger';
+
+function luaL_optinteger(L: Plua_State; nArg: Integer; def: lua_Integer): lua_Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_optinteger';
+
+procedure luaL_checkstack(L: Plua_State; sz: Integer; const msg: PUTF8Char); cdecl;
+  external SGT_DLL name _PU + 'luaL_checkstack';
+
+procedure luaL_checktype(L: Plua_State; narg: Integer; t: Integer); cdecl;
+  external SGT_DLL name _PU + 'luaL_checktype';
+
+procedure luaL_checkany(L: Plua_State; narg: Integer); cdecl;
+  external SGT_DLL name _PU + 'luaL_checkany';
+
+function luaL_newmetatable(L: Plua_State; const tname: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_newmetatable';
+
+function luaL_checkudata(L: Plua_State; ud: Integer; const tname: PUTF8Char): Pointer; cdecl;
+  external SGT_DLL name _PU + 'luaL_checkudata';
+
+procedure luaL_where(L: Plua_State; lvl: Integer); cdecl;
+  external SGT_DLL name _PU + 'luaL_where';
+
+function luaL_error(L: Plua_State; const fmt: PUTF8Char): Integer varargs; cdecl;
+  external SGT_DLL name _PU + 'luaL_error';
+
+function luaL_checkoption(L: Plua_State; narg: Integer; const def: PUTF8Char; lst: PPUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_checkoption';
+
+function luaL_ref(L: Plua_State; t: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_ref';
+
+procedure luaL_unref(L: Plua_State; t: Integer; ref: Integer); cdecl;
+  external SGT_DLL name _PU + 'luaL_unref';
+
+function luaL_loadfile(L: Plua_State; const filename: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_loadfile';
+
+function luaL_loadbuffer(L: Plua_State; const buff: PUTF8Char; sz: NativeUInt; const name: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_loadbuffer';
+
+function luaL_loadstring(L: Plua_State; const s: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_loadstring';
+
+function luaL_newstate(): Plua_State; cdecl;
+  external SGT_DLL name _PU + 'luaL_newstate';
+
+function luaL_gsub(L: Plua_State; const s: PUTF8Char; const p: PUTF8Char; const r: PUTF8Char): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'luaL_gsub';
+
+function luaL_findtable(L: Plua_State; idx: Integer; const fname: PUTF8Char; szhint: Integer): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'luaL_findtable';
+
+function luaL_fileresult(L: Plua_State; stat: Integer; const fname: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_fileresult';
+
+function luaL_execresult(L: Plua_State; stat: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_execresult';
+
+function luaL_loadfilex(L: Plua_State; const filename: PUTF8Char; const mode: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_loadfilex';
+
+function luaL_loadbufferx(L: Plua_State; const buff: PUTF8Char; sz: NativeUInt; const name: PUTF8Char; const mode: PUTF8Char): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaL_loadbufferx';
+
+procedure luaL_traceback(L: Plua_State; L1: Plua_State; const msg: PUTF8Char; level: Integer); cdecl;
+  external SGT_DLL name _PU + 'luaL_traceback';
+
+procedure luaL_setfuncs(L: Plua_State; const l_: PluaL_Reg; nup: Integer); cdecl;
+  external SGT_DLL name _PU + 'luaL_setfuncs';
+
+procedure luaL_pushmodule(L: Plua_State; const modname: PUTF8Char; sizehint: Integer); cdecl;
+  external SGT_DLL name _PU + 'luaL_pushmodule';
+
+function luaL_testudata(L: Plua_State; ud: Integer; const tname: PUTF8Char): Pointer; cdecl;
+  external SGT_DLL name _PU + 'luaL_testudata';
+
+procedure luaL_setmetatable(L: Plua_State; const tname: PUTF8Char); cdecl;
+  external SGT_DLL name _PU + 'luaL_setmetatable';
+
+procedure luaL_buffinit(L: Plua_State; B: PluaL_Buffer); cdecl;
+  external SGT_DLL name _PU + 'luaL_buffinit';
+
+function luaL_prepbuffer(B: PluaL_Buffer): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'luaL_prepbuffer';
+
+procedure luaL_addlstring(B: PluaL_Buffer; const s: PUTF8Char; l: NativeUInt); cdecl;
+  external SGT_DLL name _PU + 'luaL_addlstring';
+
+procedure luaL_addstring(B: PluaL_Buffer; const s: PUTF8Char); cdecl;
+  external SGT_DLL name _PU + 'luaL_addstring';
+
+procedure luaL_addvalue(B: PluaL_Buffer); cdecl;
+  external SGT_DLL name _PU + 'luaL_addvalue';
+
+procedure luaL_pushresult(B: PluaL_Buffer); cdecl;
+  external SGT_DLL name _PU + 'luaL_pushresult';
+
+function luaJIT_setmode(L: Plua_State; idx: Integer; mode: Integer): Integer; cdecl;
+  external SGT_DLL name _PU + 'luaJIT_setmode';
+
+procedure luaJIT_profile_start(L: Plua_State; const mode: PUTF8Char; cb: luaJIT_profile_callback; data: Pointer); cdecl;
+  external SGT_DLL name _PU + 'luaJIT_profile_start';
+
+procedure luaJIT_profile_stop(L: Plua_State); cdecl;
+  external SGT_DLL name _PU + 'luaJIT_profile_stop';
+
+function luaJIT_profile_dumpstack(L: Plua_State; const fmt: PUTF8Char; depth: Integer; len: PNativeUInt): PUTF8Char; cdecl;
+  external SGT_DLL name _PU + 'luaJIT_profile_dumpstack';
+
+procedure luaJIT_version_2_1_1710088188(); cdecl;
+  external SGT_DLL name _PU + 'luaJIT_version_2_1_1710088188';
 
 implementation
 

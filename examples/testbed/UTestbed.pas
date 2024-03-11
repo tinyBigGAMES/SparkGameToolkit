@@ -58,7 +58,8 @@ uses
   SGT.StartupDialog,
   SGT.TreeMenu,
   SGT.ClaudeAI,
-  SGT.Speech;
+  SGT.Speech,
+  SGT.Lua;
 
 type
 
@@ -89,6 +90,7 @@ type
     procedure EntityCollision();
     procedure SimpleAIChat();
     procedure AIVision();
+    procedure AIFunctionCall();
   end;
 
 procedure RunTests();
@@ -127,6 +129,9 @@ var
   LState: TStartupDialog.State;
   LZipFile: TZipFile;
 begin
+  //AIFunctionCall();
+  //Exit;
+
   // set custom style
   TStyleManager.TrySetStyle('Aqua Light Slate');
 
@@ -199,6 +204,7 @@ type
     // ai
     miAI_SimpleChat,
     miAI_Vision,
+    miAI_FunctionCall,
 
     miLast
   );
@@ -262,6 +268,7 @@ begin
     LAIMenu := LTreeMenu.AddItem(nil, 'AI', TTreeMenu.NONE, True);
       LTreeMenu.AddItem(LAIMenu, 'Simple Chat', Ord(miAI_SimpleChat), True);
       LTreeMenu.AddItem(LAIMenu, 'Vision', Ord(miAI_Vision), True);
+      LTreeMenu.AddItem(LAIMenu, 'Function Call', Ord(miAI_FunctionCall), True);
     LTreeMenu.Sort(LAIMenu);
 
     // sort whole menu
@@ -315,6 +322,7 @@ begin
         // ai
         miAI_SimpleChat: SimpleAIChat();
         miAI_Vision: AIVision();
+        miAI_FunctionCall: AIFunctionCall();
       end;
     end;
     FConfigFile.SetValue('menu', 'SelItem', LTreeMenu.GetLastSelectedId);
@@ -1318,5 +1326,31 @@ begin
   end;
 end;
 
+(*
+procedure TTestbed.AIFunctionCall();
+var
+  LClaudeAI: TClaudeAI;
+  LResponse: string;
+begin
+  LClaudeAI := TClaudeAI.Create();
+  try
+    if not LClaudeAI.LoadSystemMessagesFromFile('tools.txt') then Exit;
+    LClaudeAI.AddTextMessage('what is the weather in miami');
+    if LClaudeAI.Query(LResponse) then
+    begin
+    end;
+    Console.Teletype(LResponse);
+    Console.PrintLn();
+    Console.Pause(True);
+  finally
+    LClaudeAI.Free();
+  end;
+end;
+*)
+
+procedure TTestbed.AIFunctionCall();
+begin
+  MessageBox(0, 'Feature not implemented yet', 'Warning', MB_OK);
+end;
 
 end.

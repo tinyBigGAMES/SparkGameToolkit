@@ -92,6 +92,7 @@ type
     function GetModalNameStr(): string;
     function ProcessMessages(): TJsonArray;
     function ProcessStopSequences(): TJsonArray;
+    function  DoQuery(var AResponse: string; var AIsFunctionCall: Boolean): Boolean;
   public
     constructor Create(); override;
     destructor Destroy(); override;
@@ -581,7 +582,7 @@ begin
   if not Assigned(FMessages) then Exit;
 end;
 
-function  TClaudeAI.Query(var AResponse: string): Boolean;
+function  TClaudeAI.DoQuery(var AResponse: string; var AIsFunctionCall: Boolean): Boolean;
 const
   CApiURL = 'https://api.anthropic.com/v1/messages';
 var
@@ -637,6 +638,8 @@ begin
           LText := LJson.GetValue('usage') as TJsonObject;
           FInputTokens := LText.GetValue('input_tokens').Value.ToInteger;
           FOutputTokens := LText.GetValue('output_tokens').Value.ToInteger;
+          AIsFunctionCall := Boolean(LJson.GetValue('stop_sequence').Value = '</function_calls>');
+
           Result := True;
         end
       else
@@ -651,7 +654,31 @@ begin
   finally
     LHttpClient.Free;
   end;
+end;
 
+(* TODO: implement function callings upport
+function  TClaudeAI.Query(var AResponse: string): Boolean;
+var
+  LIsFunctionCall: Boolean;
+begin
+  LIsFunctionCall := False;
+  Result := DoQuery(AResponse, LIsFunctionCall);
+  if LIsFunctionCall then
+  begin
+    //writeln('is a function call');
+    AddTextMessage('<function_results><result><tool_name>get_weather</tool_name><stdout>{"temperature": 86.0, "conditions": "heavy rain, lightning"}</stdout></result></function_results>');
+    LIsFunctionCall := False;
+    Result := DoQuery(AResponse, LIsFunctionCall);
+  end;
+end;
+*)
+
+function  TClaudeAI.Query(var AResponse: string): Boolean;
+var
+  LIsFunctionCall: Boolean;
+begin
+  LIsFunctionCall := False;
+  Result := DoQuery(AResponse, LIsFunctionCall);
 end;
 
 procedure TClaudeAI.SimpleChat();

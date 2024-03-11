@@ -148,6 +148,7 @@ type
     class function  HttpGet(const aURL: string; const aStatus: PString=nil): string;
     class function  RemoveQuotes(const AText: string): string;
     class function  GetEnvVarValue(const AVarName: string): string;
+    class procedure ProcessMessages();
   end;
 
   { Console }
@@ -1894,6 +1895,17 @@ begin
     end
   else
     Result := '';
+end;
+
+class procedure Utils.ProcessMessages();
+var
+  LMsg: TMsg;
+begin
+  while Integer(PeekMessage(LMsg, 0, 0, 0, PM_REMOVE)) <> 0 do
+  begin
+    TranslateMessage(LMsg);
+    DispatchMessage(LMsg);
+  end;
 end;
 
 { Console }
