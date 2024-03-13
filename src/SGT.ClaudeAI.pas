@@ -51,6 +51,7 @@ uses
   System.NetEncoding,
   System.JSON,
   System.Net.HttpClient,
+  WinApi.Windows,
   SGT.Core,
   SGT.Speech;
 
@@ -59,8 +60,8 @@ type
   { TClaudeAI }
   TClaudeAI = class(TBaseObject)
   public const
-    ENVVAR_APIKEY     = 'ClaudeAIApiKey';
-    USE_ENVVAR_APIKEY = '';
+    ENVVAR_APIKEY    = 'CLAUDE_API_KEY';
+    USE_DOTENV_FILE = '';
 
     TEMPERATURE_PERCISE  = 0.0; // precise
     TEMPERATURE_BALANCED = 0.5; // balanced
@@ -100,10 +101,10 @@ type
     function  GetInputTokens(): NativeInt;
     function  GetOutputTokens(): NativeInt;
 
-    procedure SetModal(const AModal: TClaudeAI.Modal=Sonnet);
+    procedure SetModal(const AModal: TClaudeAI.Modal=Haiku);
     function  GetModal(): TClaudeAI.Modal;
 
-    procedure SetApiKey(const AApiKey: string=TClaudeAI.USE_ENVVAR_APIKEY);
+    procedure SetApiKey(const AApiKey: string=TClaudeAI.USE_DOTENV_FILE);
     function  GetApiKey(): string;
 
     procedure SetTemperature(const ATemperature: Single=TClaudeAI.TEMPERATURE_BALANCED);
@@ -148,7 +149,7 @@ implementation
 function TClaudeAI.GetModalNameStr(): string;
 begin
   case FModal of
-    Haiku : Result := 'Coming soon';
+    Haiku : Result := 'claude-3-haiku-20240307';
     Sonnet: Result := 'claude-3-sonnet-20240229';
     Opus  : Result := 'claude-3-opus-20240229';
   else
@@ -252,12 +253,13 @@ begin
   FMessages := TMessages.Create();
   FSystemMessages := TStringList.Create();
   FStopSequences := TStringList.Create();
-  FApiKey := TClaudeAI.USE_ENVVAR_APIKEY;
-  FModal := Sonnet;
+  FApiKey := TClaudeAI.USE_DOTENV_FILE;
+  FModal := Haiku;
   FTemperature := TEMPERATURE_BALANCED;
   FMaxTokens := 1024;
   ClearMessages();
   AddStopSequence('</function_calls>');
+  Utils.LoadEnvVariablesFromfile(TPath.Combine(Utils.GetAppPath(), '.env'));
 end;
 
 destructor TClaudeAI.Destroy();
@@ -281,7 +283,7 @@ begin
   Result := FOutputTokens;
 end;
 
-procedure TClaudeAI.SetModal(const AModal: TClaudeAI.Modal=Sonnet);
+procedure TClaudeAI.SetModal(const AModal: TClaudeAI.Modal);
 begin
   FModal := AModal;
 end;
@@ -299,7 +301,9 @@ end;
 function  TClaudeAI.GetApiKey(): string;
 begin
   if FApiKey.IsEmpty then
-    Result := Utils.GetEnvVarValue(ENVVAR_APIKEY)
+    begin
+      Result := Utils.GetEnvVarValue(ENVVAR_APIKEY)
+    end
   else
     Result := FApiKey;
 end;
@@ -695,11 +699,11 @@ begin
 
   LSpeech := True;
 
-
   Console.PrintLn('Spark Game Toolkit: ClaudeAI Chat', Console.CYAN);
   Console.PrintLn(Console.CRLF+'   Powered by Claude 3 from Anthropic!', Console.BRIGHTWHITE);
-  Console.PrintLn('   Go to https://console.anthropic.com/dashboard to get your API key.', Console.WHITE);
-  Console.PrintLn('   Create an environment variable named ClaudeAIApiKey to hold your API key.', Console.WHITE);
+  Console.PrintLn('   1. Go to https://console.anthropic.com/dashboard to get your API key.', Console.WHITE);
+  Console.PrintLn('   2. Edit template.env.txt with your API key.', Console.WHITE);
+  Console.PrintLn('   3. Rename to .env and place in project root folder.', Console.WHITE);
   Console.PrintLn(Console.CRLF+'   Enter /help for help, /quit to quit', Console.BRIGHTYELLOW);
 
   AddSystemMessage('you are a helpful AI assitant, you will answer every question asked by user to the best of your ability');

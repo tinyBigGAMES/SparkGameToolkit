@@ -1275,7 +1275,7 @@ begin
   try
     LClaudeAI := TClaudeAI.Create();
     try
-      if not LClaudeAI.LoadSystemMessagesFromZipFile(LZipFile, 'res/ai/Tools.txt') then Exit;
+      //if not LClaudeAI.LoadSystemMessagesFromZipFile(LZipFile, 'res/ai/Tools.txt') then Exit;
       LClaudeAI.SimpleChat();
     finally
       LClaudeAI.Free();
@@ -1297,7 +1297,8 @@ begin
   Console.PrintLn('Spark Game Toolkit: ClaudeAI Vision', Console.CYAN);
   Console.PrintLn(Console.CRLF+'   Powered by Claude 3 from Anthropic!', Console.BRIGHTWHITE);
   Console.PrintLn('   Go to https://console.anthropic.com/dashboard to get your API key.', Console.WHITE);
-  Console.PrintLn('   Create an environment variable named ClaudeAIApiKey to hold your API key.', Console.WHITE);
+  Console.PrintLn('   2. Edit template.env.txt with your API key.', Console.WHITE);
+  Console.PrintLn('   3. Rename to .env and place in project root folder.', Console.WHITE);
   Console.Print(Console.CRLF+'Tell me about this image "%s"...', [CImageFilename], Console.BRIGHTYELLOW);
 
   LZipFile := TZipFile.Init(CZipFilename);

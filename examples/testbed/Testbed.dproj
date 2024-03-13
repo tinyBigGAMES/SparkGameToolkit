@@ -138,6 +138,7 @@
         <DCCReference Include="..\..\src\SGT.Speech.pas"/>
         <DCCReference Include="..\..\src\SGT.CloudDB.pas"/>
         <DCCReference Include="..\..\src\SGT.Lua.pas"/>
+        <DCCReference Include="..\..\src\SGT.AI.pas"/>
         <RcItem Include="AquaLightSlate.vsf">
             <ContainerId>ResourceItem</ContainerId>
             <ResourceType>VCLSTYLE</ResourceType>

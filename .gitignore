@@ -77,5 +77,6 @@ bin/imgui.ini
 docs/SGT.chw
 bin/Testbed.ini
 bin/tools.txt
+bin/.env
 
 

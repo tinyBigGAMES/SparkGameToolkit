@@ -149,6 +149,7 @@ type
     class function  RemoveQuotes(const AText: string): string;
     class function  GetEnvVarValue(const AVarName: string): string;
     class procedure ProcessMessages();
+    class function LoadEnvVariablesFromfile(const AFilename: string): Boolean;
   end;
 
   { Console }
@@ -1905,6 +1906,37 @@ begin
   begin
     TranslateMessage(LMsg);
     DispatchMessage(LMsg);
+  end;
+end;
+
+class function Utils.LoadEnvVariablesFromfile(const AFilename: string): Boolean;
+var
+  LEnvList: TStringList;
+  I: Integer;
+  Key, Value: string;
+begin
+  Result := False;
+
+  LEnvList := TStringList.Create;
+  try
+    LEnvList.LoadFromFile(AFilename);
+    for I := 0 to LEnvList.Count - 1 do
+    begin
+      if Trim(LEnvList[I]) <> '' then // Skip empty lines
+      begin
+        if Trim(LEnvList[I])[1] <> '#' then // Skip comments
+        begin
+          Key := Trim(Copy(LEnvList[I], 1, Pos('=', LEnvList[I]) - 1));
+          Value := Trim(Copy(LEnvList[I], Pos('=', LEnvList[I]) + 1, MaxInt));
+          if not SetEnvironmentVariable(PChar(Key), PChar(Value)) then
+            Exit(False)
+          else
+            Result := True;
+        end;
+      end;
+    end;
+  finally
+    LEnvList.Free;
   end;
 end;
 

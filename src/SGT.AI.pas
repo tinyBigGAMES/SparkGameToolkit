@@ -37,39 +37,75 @@ Email  : support@tinybiggames.com
 See LICENSE for license information
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *)
 
-program Testbed;
+unit SGT.AI;
 
-{$APPTYPE CONSOLE}
+{$I SGT.Defines.inc}
 
-{$R *.res}
-
-{$R *.dres}
+interface
 
 uses
+  System.Generics.Collections,
   System.SysUtils,
-  UTestbed in 'UTestbed.pas',
-  SGT.Deps in '..\..\src\SGT.Deps.pas',
-  SGT.OGL in '..\..\src\SGT.OGL.pas',
-  SGT.Core in '..\..\src\SGT.Core.pas',
-  SGT.Game in '..\..\src\SGT.Game.pas',
-  SGT.Deps.Ext in '..\..\src\SGT.Deps.Ext.pas',
-  SGT.TreeMenuForm in '..\..\src\SGT.TreeMenuForm.pas' {TreeMenuForm},
-  SGT.TreeMenu in '..\..\src\SGT.TreeMenu.pas',
-  SGT.StartupDialog in '..\..\src\SGT.StartupDialog.pas',
-  SGT.StartupDialogForm in '..\..\src\SGT.StartupDialogForm.pas' {StartupDialogForm},
-  SGT.ClaudeAI in '..\..\src\SGT.ClaudeAI.pas',
-  SGT.SpeechLib in '..\..\src\SGT.SpeechLib.pas',
-  SGT.Speech in '..\..\src\SGT.Speech.pas',
-  SGT.CloudDB in '..\..\src\SGT.CloudDB.pas',
-  SGT.Lua in '..\..\src\SGT.Lua.pas',
-  SGT.AI in '..\..\src\SGT.AI.pas';
+  System.IOUtils,
+  System.Classes,
+  System.NetEncoding,
+  System.JSON,
+  System.Net.HttpClient,
+  SGT.Core,
+  SGT.Speech;
 
-begin
-  try
-    ReportMemoryLeaksOnShutdown := True;
-    RunTests();
-  except
-    on E: Exception do
-      Writeln(E.ClassName, ': ', E.Message);
+type
+
+  { TAI }
+  TAI = class(TBaseObject)
+  protected type
+    Role = (roSystem, roUser, roAssiant);
+    TMessage = record
+      Role: string;
+      Content: string;
+    end;
+    TMessages = TList<TMessage>;
+  protected
+    FMessages: TMessages;
+  public
+    constructor Create(); override;
+    destructor Destroy(); override;
+
+    procedure AddMessage(const ARole, AContent: string);
+    function  GetMessageCount(): Integer;
+    function  DeleteMessage(const AIndex: Integer): Boolean;
+    procedure ClearMessages();
   end;
+
+implementation
+
+{ TAI }
+constructor TAI.Create();
+begin
+  inherited;
+end;
+
+destructor TAI.Destroy();
+begin
+  inherited;
+end;
+
+procedure TAI.AddMessage(const ARole, AContent: string);
+begin
+end;
+
+function  TAI.GetMessageCount(): Integer;
+begin
+end;
+
+function  TAI.DeleteMessage(const AIndex: Integer): Boolean;
+begin
+end;
+
+procedure TAI.ClearMessages();
+begin
+end;
+
+
+
 end.
