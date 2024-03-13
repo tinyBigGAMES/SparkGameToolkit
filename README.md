@@ -105,6 +105,10 @@ Our development motto:
 - <a href="https://github.com/tinyBigGAMES/SparkGameToolkit/issues" target="_blank">Issues</a>
 - <a href="https://github.com/tinyBigGAMES/SparkGameToolkit/discussions" target="_blank">Discussions</a>
 - <a href="https://learndelphi.org/" target="_blank">learndelphi.org</a>
+- <a href="https://discord.gg/tPWjMwK" target="_blank">Discord</a>
+- <a href="https://youtube.com/tinyBigGAMES" target="_blank">YouTube</a>
+- <a href="https://twitter.com/tinyBigGAMES" target="_blank">X (Twitter)</a>
+- <a href="https://tinybiggames.com/" target="_blank">tinyBigGAMES</a>
 
 <p align="center">
   <img src="media/techpartner-white.png" alt="Embarcadero Technical Partner Logo" width="200"/>
