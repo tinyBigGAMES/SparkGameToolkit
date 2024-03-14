@@ -1917,6 +1917,8 @@ var
 begin
   Result := False;
 
+  if not TFile.Exists(AFilename) then Exit;
+
   LEnvList := TStringList.Create;
   try
     LEnvList.LoadFromFile(AFilename);

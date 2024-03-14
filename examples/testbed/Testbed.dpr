@@ -61,8 +61,7 @@ uses
   SGT.SpeechLib in '..\..\src\SGT.SpeechLib.pas',
   SGT.Speech in '..\..\src\SGT.Speech.pas',
   SGT.CloudDB in '..\..\src\SGT.CloudDB.pas',
-  SGT.Lua in '..\..\src\SGT.Lua.pas',
-  SGT.AI in '..\..\src\SGT.AI.pas';
+  SGT.Lua in '..\..\src\SGT.Lua.pas';
 
 begin
   try

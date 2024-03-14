@@ -1318,6 +1318,7 @@ begin
       Console.Teletype(LResponse);
       Console.PrintLn();
       Console.Pause(True);
+      Speech.Clear();
     finally
       LClaudeAI.Free();
     end;
